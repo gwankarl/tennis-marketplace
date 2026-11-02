@@ -1,0 +1,14 @@
+node_modules/
+dist/
+build/
+coverage/
+
+.env
+.env.*
+!.env.example
+
+/references/
+.react-router/
+
+playwright-report/
+test-results/

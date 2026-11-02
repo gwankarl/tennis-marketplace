@@ -1,0 +1,10 @@
+**/node_modules/
+**/dist/
+**/build/
+**/coverage/
+**/.react-router/
+references/
+AGENTS.md
+package-lock.json
+**/.env
+**/.env.*
