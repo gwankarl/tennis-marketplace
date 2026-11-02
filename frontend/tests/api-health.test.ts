@@ -19,8 +19,21 @@ describe('getApiConnectionStatus', () => {
     expect(fetch).toHaveBeenCalledOnce();
   });
 
-  it('returns unavailable for a non-success HTTP response', async () => {
-    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: false }));
+  it('returns unavailable for a valid backend error response', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({
+        ok: false,
+        status: 503,
+        json: async () => ({
+          error: {
+            code: 'SERVICE_UNAVAILABLE',
+            message: 'Safe backend message.',
+          },
+          meta: { requestId: 'server-request-id' },
+        }),
+      }),
+    );
 
     await expect(getApiConnectionStatus()).resolves.toBe('unavailable');
   });

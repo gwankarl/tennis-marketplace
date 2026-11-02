@@ -1,43 +1,41 @@
 import { serverEnv } from '../config/server-env.server';
+import { requestApi, type RuntimeSchema } from './api-client.server';
 
 export type ApiConnectionStatus = 'available' | 'unavailable';
 
-const API_REQUEST_TIMEOUT_MS = 3_000;
+interface HealthResponse {
+  data: { status: 'ok' };
+}
+
+const healthResponseSchema: RuntimeSchema<HealthResponse> = {
+  parse(value) {
+    if (
+      typeof value !== 'object' ||
+      value === null ||
+      !('data' in value) ||
+      typeof value.data !== 'object' ||
+      value.data === null ||
+      !('status' in value.data) ||
+      value.data.status !== 'ok'
+    ) {
+      throw new Error('Invalid health response.');
+    }
+
+    return { data: { status: 'ok' } };
+  },
+};
 
 /**
  * Checks API process health for server-rendered UI. Failures return a safe
  * status and never expose internal URLs or response details to the browser.
  */
 export async function getApiConnectionStatus(): Promise<ApiConnectionStatus> {
-  const baseUrl = serverEnv.API_BASE_URL.replace(/\/$/, '');
-  const healthUrl = `${baseUrl}/api/v1/health`;
+  const result = await requestApi(
+    serverEnv.API_BASE_URL,
+    '/api/v1/health',
+    healthResponseSchema,
+    { timeoutMs: 3_000 },
+  );
 
-  try {
-    const response = await fetch(healthUrl, {
-      headers: { Accept: 'application/json' },
-      signal: AbortSignal.timeout(API_REQUEST_TIMEOUT_MS),
-    });
-
-    if (!response.ok) {
-      return 'unavailable';
-    }
-
-    const payload: unknown = await response.json();
-
-    if (
-      typeof payload === 'object' &&
-      payload !== null &&
-      'data' in payload &&
-      typeof payload.data === 'object' &&
-      payload.data !== null &&
-      'status' in payload.data &&
-      payload.data.status === 'ok'
-    ) {
-      return 'available';
-    }
-  } catch {
-    // Connection, timeout, and invalid JSON errors are safe unavailable states.
-  }
-
-  return 'unavailable';
+  return result.ok ? 'available' : 'unavailable';
 }

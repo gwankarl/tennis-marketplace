@@ -9,11 +9,15 @@ describe('parseBackendEnv', () => {
           'postgresql://dev:example@127.0.0.1:5432/tennis_xpress_dev',
         HOST: '127.0.0.1',
         PORT: '3100',
+        TERMS_VERSION: 'terms-v1',
       }),
     ).toEqual({
       DATABASE_URL: 'postgresql://dev:example@127.0.0.1:5432/tennis_xpress_dev',
       HOST: '127.0.0.1',
       PORT: 3100,
+      REGISTRATION_RATE_LIMIT_MAX: 5,
+      REGISTRATION_RATE_LIMIT_WINDOW_MS: 900_000,
+      TERMS_VERSION: 'terms-v1',
     });
   });
 

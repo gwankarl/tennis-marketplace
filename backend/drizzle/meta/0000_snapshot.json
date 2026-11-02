@@ -1,0 +1,214 @@
+{
+  "id": "cb86ac12-7a96-4f84-a14b-30bc5b0db63c",
+  "prevId": "00000000-0000-0000-0000-000000000000",
+  "version": "7",
+  "dialect": "postgresql",
+  "tables": {
+    "public.user_permissions": {
+      "name": "user_permissions",
+      "schema": "",
+      "columns": {
+        "user_id": {
+          "name": "user_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "permission": {
+          "name": "permission",
+          "type": "user_permission",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "granted_at": {
+          "name": "granted_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "user_permissions_user_id_users_id_fk": {
+          "name": "user_permissions_user_id_users_id_fk",
+          "tableFrom": "user_permissions",
+          "tableTo": "users",
+          "columnsFrom": [
+            "user_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {
+        "user_permissions_pk": {
+          "name": "user_permissions_pk",
+          "columns": [
+            "user_id",
+            "permission"
+          ]
+        }
+      },
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.users": {
+      "name": "users",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "first_name": {
+          "name": "first_name",
+          "type": "varchar(100)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "last_name": {
+          "name": "last_name",
+          "type": "varchar(100)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "email": {
+          "name": "email",
+          "type": "varchar(320)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "password_hash": {
+          "name": "password_hash",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "status": {
+          "name": "status",
+          "type": "account_status",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'pending_email_verification'"
+        },
+        "email_verified_at": {
+          "name": "email_verified_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "terms_accepted_version": {
+          "name": "terms_accepted_version",
+          "type": "varchar(64)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "terms_accepted_at": {
+          "name": "terms_accepted_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "users_email_normalized_unique": {
+          "name": "users_email_normalized_unique",
+          "columns": [
+            {
+              "expression": "lower(btrim(\"email\"))",
+              "asc": true,
+              "isExpression": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "users_first_name_not_blank": {
+          "name": "users_first_name_not_blank",
+          "value": "length(btrim(\"users\".\"first_name\")) > 0"
+        },
+        "users_last_name_not_blank": {
+          "name": "users_last_name_not_blank",
+          "value": "length(btrim(\"users\".\"last_name\")) > 0"
+        },
+        "users_email_not_blank": {
+          "name": "users_email_not_blank",
+          "value": "length(btrim(\"users\".\"email\")) > 0 AND \"users\".\"email\" = btrim(\"users\".\"email\")"
+        },
+        "users_password_hash_not_blank": {
+          "name": "users_password_hash_not_blank",
+          "value": "length(btrim(\"users\".\"password_hash\")) > 0"
+        },
+        "users_terms_version_not_blank": {
+          "name": "users_terms_version_not_blank",
+          "value": "length(btrim(\"users\".\"terms_accepted_version\")) > 0"
+        },
+        "users_active_requires_verified_email": {
+          "name": "users_active_requires_verified_email",
+          "value": "\"users\".\"status\" <> 'active' OR \"users\".\"email_verified_at\" IS NOT NULL"
+        },
+        "users_pending_requires_unverified_email": {
+          "name": "users_pending_requires_unverified_email",
+          "value": "\"users\".\"status\" <> 'pending_email_verification' OR \"users\".\"email_verified_at\" IS NULL"
+        }
+      },
+      "isRLSEnabled": false
+    }
+  },
+  "enums": {
+    "public.account_status": {
+      "name": "account_status",
+      "schema": "public",
+      "values": [
+        "pending_email_verification",
+        "active",
+        "suspended"
+      ]
+    },
+    "public.user_permission": {
+      "name": "user_permission",
+      "schema": "public",
+      "values": [
+        "administrator"
+      ]
+    }
+  },
+  "schemas": {},
+  "sequences": {},
+  "roles": {},
+  "policies": {},
+  "views": {},
+  "_meta": {
+    "columns": {},
+    "schemas": {},
+    "tables": {}
+  }
+}

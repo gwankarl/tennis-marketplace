@@ -1,8 +1,26 @@
 // Load and validate DATABASE_URL; this does not open a database connection.
 import { env } from './config/runtime-env.js';
 import { buildApp } from './app.js';
+import { closeDatabase, db } from './db/client.js';
+import { createAccountRepository } from './identity/account.repository.js';
+import { createRegistrationService } from './identity/registration.service.js';
+import { hashPassword, screenPassword } from './identity/password.service.js';
 
-const app = buildApp();
+const registrationService = createRegistrationService({
+  accounts: createAccountRepository(db),
+  passwords: { screenPassword, hashPassword },
+  termsVersion: env.TERMS_VERSION,
+});
+
+const app = buildApp({
+  registration: {
+    service: registrationService,
+    rateLimitMax: env.REGISTRATION_RATE_LIMIT_MAX,
+    rateLimitWindowMs: env.REGISTRATION_RATE_LIMIT_WINDOW_MS,
+  },
+  closeResources: closeDatabase,
+});
+
 let shuttingDown = false;
 
 for (const signal of ['SIGINT', 'SIGTERM'] as const) {
