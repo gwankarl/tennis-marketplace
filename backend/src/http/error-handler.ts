@@ -12,7 +12,10 @@ import {
 } from './application-error.js';
 import { serializeUnexpectedFailure } from '../config/logger.js';
 import { hasZodFastifySchemaValidationErrors } from '@fastify/type-provider-zod';
-import { RegistrationRateLimitError } from './rate-limit-error.js';
+import {
+  RegistrationRateLimitError,
+  ResendVerificationRateLimitError,
+} from './rate-limit-error.js';
 
 const APPLICATION_ERROR_STATUS: Record<ApplicationErrorCode, number> = {
   UNAUTHENTICATED: 401,
@@ -192,7 +195,10 @@ export function registerErrorHandlers(app: FastifyInstance): void {
       );
     }
 
-    if (error instanceof RegistrationRateLimitError) {
+    if (
+      error instanceof RegistrationRateLimitError ||
+      error instanceof ResendVerificationRateLimitError
+    ) {
       reply.header('retry-after', String(error.retryAfterSeconds));
 
       return sendError(
@@ -200,7 +206,9 @@ export function registerErrorHandlers(app: FastifyInstance): void {
         request.id,
         429,
         'RATE_LIMITED',
-        'Too many registration attempts. Try again later.',
+        error instanceof RegistrationRateLimitError
+          ? 'Too many registration attempts. Try again later.'
+          : 'Too many resend requests. Try again later.',
       );
     }
 

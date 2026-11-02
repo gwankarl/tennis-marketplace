@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react';
-import { Form, useNavigation } from 'react-router';
+import { Form, Link, useNavigation } from 'react-router';
 import type {
   RegistrationActionData,
   RegistrationField,
@@ -44,6 +44,10 @@ export function RegistrationForm({
         <p>
           If this email address can be registered, follow the verification link
           if an email arrives.
+        </p>
+        <p>
+          Need another verification email?{' '}
+          <Link to='/resend-verification'>Request one</Link>
         </p>
       </main>
     );

@@ -34,6 +34,12 @@ const passwordSchema = z.string().superRefine((value, context) => {
   }
 });
 
+export const normalizedEmailSchema = z
+  .string()
+  .trim()
+  .max(254)
+  .email()
+  .toLowerCase();
 /**
  * API input only. Confirmation, account status, permissions, and terms
  * metadata are deliberately excluded; the server supplies the latter fields.
@@ -42,7 +48,7 @@ export const registrationRequestSchema = z
   .object({
     firstName: nameSchema,
     lastName: nameSchema,
-    email: z.string().trim().max(254).email().toLowerCase(),
+    email: normalizedEmailSchema,
     password: passwordSchema,
     termsAccepted: z.literal(true),
   })

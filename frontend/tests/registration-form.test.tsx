@@ -75,7 +75,7 @@ describe('RegistrationForm', () => {
     );
   });
 
-  it('replaces the form with the generic acknowledgement', () => {
+  it('shows the generic acknowledgement and a resend link', () => {
     renderForm({ formKey: 'success-1', values, success: true });
 
     expect(
@@ -86,9 +86,10 @@ describe('RegistrationForm', () => {
         /If this email address can be registered, follow the verification link if an email arrives\./i,
       ),
     ).toBeInTheDocument();
-    expect(
-      screen.queryByText(/delivery is not enabled/i),
-    ).not.toBeInTheDocument();
+
+    const resendLink = screen.getByRole('link', { name: 'Request one' });
+    expect(resendLink).toHaveAttribute('href', '/resend-verification');
+    expect(screen.queryByText(/delivery is not enabled/i)).toBeNull();
     expect(screen.queryByRole('button', { name: 'Create account' })).toBeNull();
   });
 });

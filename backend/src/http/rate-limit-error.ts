@@ -8,3 +8,10 @@ export class RegistrationRateLimitError extends Error {
     this.name = 'RegistrationRateLimitError';
   }
 }
+
+export class ResendVerificationRateLimitError extends Error {
+  constructor(readonly retryAfterSeconds: number) {
+    super('Resend verification IP limit exceeded.');
+    this.name = 'ResendVerificationRateLimitError';
+  }
+}

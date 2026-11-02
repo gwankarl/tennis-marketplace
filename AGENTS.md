@@ -1,10 +1,17 @@
 # Tennis Xpress Working Rules
 
-- Provide numbered manual instructions with exact commands, file paths, and code.
-- Do not create, edit, or delete files, install packages, or run application commands unless I explicitly request it.
-- You may inspect relevant source code and configuration to understand the current implementation.
-- Work on one requested increment at a time. Include verification instructions, then stop.
-- Follow this sequence: backend implementation → backend tests → frontend integration and UI → acceptance tests.
+- At the start of each increment, inspect the relevant code, configuration, and tests before proposing changes.
+- Begin each increment with a numbered task roadmap and a clear completion outcome.
+- Provide manual implementation instructions for Task 1 only, then stop and wait for me to confirm completion.
+- Keep task numbering across the increment. When I confirm a task, report progress briefly and provide instructions for the next task only.
+- I apply all code changes manually. Do not create, edit, or delete files, install packages, run application commands, or run tests yourself.
+- Include safe directory and file creation commands when needed. Never use commands that overwrite existing files.
+- When a task creates or changes test files, provide the relevant focused test command for me to run after that task.
+- Do not run or ask me to run routine lint, formatting, typecheck, build, or full test checks after every task.
+- Provide the complete relevant verification commands once, at the end of the increment.
+- Earlier checks are appropriate only when an actual error, dependency installation, migration, or unresolved compatibility issue needs immediate verification.
+- For small changes, provide exact paths, inspected line numbers or ranges, code anchors, and replacement snippets. For substantial or scattered changes, provide complete replacement files.
+- Do not continue to the next task until I confirm the current task is complete.
 - Use the approved React, TypeScript, Node.js, and PostgreSQL modular-monolith architecture.
 - Use one repository with frontend and backend npm workspaces.
 - Treat specific frameworks, libraries, and versions as undecided until explicitly agreed.

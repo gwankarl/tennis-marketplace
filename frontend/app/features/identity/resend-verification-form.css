@@ -1,0 +1,41 @@
+.resend-verification {
+  box-sizing: border-box;
+  margin: 2rem auto;
+  max-width: 38rem;
+  padding: 0 1rem;
+}
+
+.resend-verification__form {
+  display: grid;
+  gap: 1rem;
+}
+
+.resend-verification__field {
+  display: grid;
+  gap: 0.35rem;
+}
+
+.resend-verification__field input {
+  box-sizing: border-box;
+  font: inherit;
+  max-width: 100%;
+  padding: 0.6rem;
+}
+
+.resend-verification__field-error {
+  color: #a32020;
+  margin: 0;
+}
+
+.resend-verification__errors {
+  border: 1px solid #a32020;
+  border-radius: 0.35rem;
+  margin: 1rem 0;
+  padding: 1rem;
+}
+
+.resend-verification button {
+  font: inherit;
+  justify-self: start;
+  padding: 0.65rem 1rem;
+}

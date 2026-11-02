@@ -1,4 +1,4 @@
-import { Form } from 'react-router';
+import { Form, Link } from 'react-router';
 import type {
   VerificationActionData,
   VerificationPageState,
@@ -77,6 +77,14 @@ export function EmailVerificationPage({
             {pending ? 'Verifying…' : 'Verify email'}
           </button>
         </Form>
+      )}
+      {(state === 'missing' ||
+        state === 'invalid' ||
+        state === 'temporary-failure') && (
+        <p>
+          Need another verification email?{' '}
+          <Link to='/resend-verification'>Request one</Link>
+        </p>
       )}
     </main>
   );

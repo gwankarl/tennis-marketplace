@@ -8,12 +8,21 @@ import { hashPassword, screenPassword } from './identity/password.service.js';
 import { parseEmailQueueConfig } from './config/email-queue-env.js';
 import { createEmailVerificationRepository } from './identity/email-verification.repository.js';
 import { createEmailVerificationService } from './identity/email-verification.service.js';
+import { createEmailVerificationResendRepository } from './identity/email-verification-resend.repository.js';
+import { createResendVerificationService } from './identity/resend-verification.service.js';
 
 const verificationService = createEmailVerificationService({
   repository: createEmailVerificationRepository(db),
   // Queue secrets are validated only when registration needs to create a job.
   // Health-only checks and API startup do not require SMTP or queue settings.
   queueConfig: () => parseEmailQueueConfig(process.env),
+});
+
+const resendVerificationService = createResendVerificationService({
+  repository: createEmailVerificationResendRepository(db),
+  verification: verificationService,
+  cooldownMs: env.RESEND_VERIFICATION_ACCOUNT_COOLDOWN_MS,
+  maxJobsPerHour: env.RESEND_VERIFICATION_ACCOUNT_MAX_PER_HOUR,
 });
 
 const registrationService = createRegistrationService({
@@ -31,6 +40,11 @@ const app = buildApp({
   },
   emailVerification: {
     service: verificationService,
+  },
+  resendVerification: {
+    service: resendVerificationService,
+    ipRateLimitMax: env.RESEND_VERIFICATION_IP_RATE_LIMIT_MAX,
+    ipRateLimitWindowMs: env.RESEND_VERIFICATION_IP_RATE_LIMIT_WINDOW_MS,
   },
   closeResources: closeDatabase,
 });

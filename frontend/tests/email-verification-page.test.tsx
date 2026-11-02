@@ -63,17 +63,27 @@ describe('EmailVerificationPage', () => {
     expect(screen.queryByRole('link')).toBeNull();
   });
 
-  it('shows safe invalid, missing, and temporary-failure states', () => {
+  it('offers a resend link for missing or unusable verification links', () => {
     const { unmount } = renderPage('invalid');
+
     expect(
       screen.getByText(/invalid, expired, or has already been used/i),
     ).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Request one' })).toHaveAttribute(
+      'href',
+      '/resend-verification',
+    );
 
     unmount();
     renderPage('missing');
+
     expect(
       screen.getByRole('heading', { name: 'Verification link required' }),
     ).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Request one' })).toHaveAttribute(
+      'href',
+      '/resend-verification',
+    );
   });
 
   it('keeps the form available for retry after a temporary failure', () => {
@@ -85,6 +95,10 @@ describe('EmailVerificationPage', () => {
       }),
     ).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Verify email' })).toBeEnabled();
+    expect(screen.getByRole('link', { name: 'Request one' })).toHaveAttribute(
+      'href',
+      '/resend-verification',
+    );
   });
 
   it('shows pending state and prevents a second submission', () => {
