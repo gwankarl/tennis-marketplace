@@ -29,6 +29,9 @@ const app = buildApp({
     rateLimitMax: env.REGISTRATION_RATE_LIMIT_MAX,
     rateLimitWindowMs: env.REGISTRATION_RATE_LIMIT_WINDOW_MS,
   },
+  emailVerification: {
+    service: verificationService,
+  },
   closeResources: closeDatabase,
 });
 

@@ -419,6 +419,12 @@ describe('email verification and delivery-job persistence', () => {
         'SELECT status, email_verified_at FROM users WHERE id = $1',
         [accountId],
       );
+      const permissionResult = await getPool().query(
+        'SELECT permission FROM user_permissions WHERE user_id = $1',
+        [accountId],
+      );
+
+      expect(permissionResult.rows).toEqual([]);
       expect(accountResult.rows[0].status).toBe('suspended');
       expect(accountResult.rows[0].email_verified_at).toEqual(TEST_NOW);
     });

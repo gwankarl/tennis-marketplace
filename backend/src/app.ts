@@ -6,10 +6,13 @@ import { configureSchemaCompilers } from './http/schema-compilers.js';
 import { registerOpenApi } from './http/openapi.js';
 import type { RegistrationRoutesOptions } from './identity/registration.routes.js';
 import { registrationRoutes } from './identity/registration.routes.js';
+import type { EmailVerificationRoutesOptions } from './identity/email-verification.routes.js';
+import { emailVerificationRoutes } from './identity/email-verification.routes.js';
 
 interface BuildAppOptions {
   loggerStream?: LoggerStream;
   registration?: RegistrationRoutesOptions;
+  emailVerification?: EmailVerificationRoutesOptions;
   closeResources?: () => Promise<void>;
 }
 
@@ -36,6 +39,10 @@ export function buildApp(options: BuildAppOptions = {}) {
       data: { status: 'ok' },
     }));
   });
+
+  if (options.emailVerification) {
+    app.register(emailVerificationRoutes, options.emailVerification);
+  }
 
   if (options.registration) {
     app.register(registrationRoutes, options.registration);

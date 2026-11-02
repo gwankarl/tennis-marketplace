@@ -72,7 +72,7 @@ export default tseslint.config(
         {
           allowConstantExport: true,
           allowCompoundComponents: true,
-          allowExportNames: ['loader', 'action', 'links'],
+          allowExportNames: ['loader', 'action', 'links', 'headers'],
         },
       ],
     },
