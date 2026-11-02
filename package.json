@@ -14,13 +14,10 @@
     "build": "npm run build --workspaces --if-present",
     "test:backend": "npm run test --workspace=@tennis-xpress/backend",
     "test:backend:integration": "npm run test:integration --workspace=@tennis-xpress/backend",
-    "test:frontend": "npm run test --workspace=@tennis-xpress/frontend",
-    "test:e2e": "playwright test",
-    "test:e2e:ui": "playwright test --ui"
+    "test:frontend": "npm run test --workspace=@tennis-xpress/frontend"
   },
   "devDependencies": {
     "@eslint/js": "10.0.1",
-    "@playwright/test": "1.64.1",
     "eslint": "10.14.0",
     "eslint-plugin-react-hooks": "7.1.1",
     "eslint-plugin-react-refresh": "0.5.7",

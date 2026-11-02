@@ -1,0 +1,48 @@
+.registration {
+  box-sizing: border-box;
+  margin: 2rem auto;
+  max-width: 38rem;
+  padding: 0 1rem;
+}
+
+.registration__notice,
+.registration__errors {
+  border: 1px solid #777;
+  border-radius: 0.35rem;
+  margin: 1rem 0;
+  padding: 1rem;
+}
+
+.registration__errors {
+  border-color: #a32020;
+}
+
+.registration__field {
+  display: grid;
+  gap: 0.35rem;
+  margin: 1rem 0;
+}
+
+.registration__field input:not([type='checkbox']) {
+  box-sizing: border-box;
+  font: inherit;
+  max-width: 100%;
+  padding: 0.6rem;
+}
+
+.registration__checkbox {
+  align-items: start;
+  display: flex;
+  gap: 0.6rem;
+}
+
+.registration__field-error {
+  color: #a32020;
+  margin: 0;
+}
+
+.registration button {
+  font: inherit;
+  margin-top: 0.5rem;
+  padding: 0.65rem 1rem;
+}

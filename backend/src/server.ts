@@ -5,10 +5,21 @@ import { closeDatabase, db } from './db/client.js';
 import { createAccountRepository } from './identity/account.repository.js';
 import { createRegistrationService } from './identity/registration.service.js';
 import { hashPassword, screenPassword } from './identity/password.service.js';
+import { parseEmailQueueConfig } from './config/email-queue-env.js';
+import { createEmailVerificationRepository } from './identity/email-verification.repository.js';
+import { createEmailVerificationService } from './identity/email-verification.service.js';
+
+const verificationService = createEmailVerificationService({
+  repository: createEmailVerificationRepository(db),
+  // Queue secrets are validated only when registration needs to create a job.
+  // Health-only checks and API startup do not require SMTP or queue settings.
+  queueConfig: () => parseEmailQueueConfig(process.env),
+});
 
 const registrationService = createRegistrationService({
   accounts: createAccountRepository(db),
   passwords: { screenPassword, hashPassword },
+  verification: verificationService,
   termsVersion: env.TERMS_VERSION,
 });
 

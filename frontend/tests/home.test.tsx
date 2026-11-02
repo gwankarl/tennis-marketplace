@@ -1,10 +1,15 @@
 import { render, screen } from '@testing-library/react';
+import { MemoryRouter } from 'react-router';
 import { describe, expect, it } from 'vitest';
 import { HomePage } from '../app/components/home-page';
 
 describe('HomePage', () => {
-  it('renders the accessible heading and available API status', () => {
-    render(<HomePage apiStatus='available' />);
+  it('renders the accessible heading, API status, and registration link', () => {
+    render(
+      <MemoryRouter>
+        <HomePage apiStatus='available' />
+      </MemoryRouter>,
+    );
 
     expect(
       screen.getByRole('heading', {
@@ -13,10 +18,17 @@ describe('HomePage', () => {
       }),
     ).toBeInTheDocument();
     expect(screen.getByText('API connection: Available')).toBeInTheDocument();
+    expect(
+      screen.getByRole('link', { name: 'Create an account' }),
+    ).toHaveAttribute('href', '/register');
   });
 
   it('shows a safe unavailable status', () => {
-    render(<HomePage apiStatus='unavailable' />);
+    render(
+      <MemoryRouter>
+        <HomePage apiStatus='unavailable' />
+      </MemoryRouter>,
+    );
 
     expect(screen.getByText('API connection: Unavailable')).toBeInTheDocument();
   });

@@ -8,6 +8,20 @@
       "when": 1793607868517,
       "tag": "0000_accounts",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1793630128140,
+      "tag": "0001_email_verification_tokens",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1793631455026,
+      "tag": "0002_encrypted_email_delivery_jobs",
+      "breakpoints": true
     }
   ]
 }

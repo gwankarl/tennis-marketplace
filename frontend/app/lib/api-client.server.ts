@@ -29,6 +29,8 @@ export type ApiResult<T> =
 export interface ApiRequestOptions {
   fetchImplementation?: typeof fetch;
   timeoutMs?: number;
+  method?: 'GET' | 'POST';
+  jsonBody?: unknown;
 }
 
 const DEFAULT_TIMEOUT_MS = 5_000;
@@ -133,6 +135,8 @@ export async function requestApi<T>(
     controller.abort();
   }, boundedTimeout(options.timeoutMs));
 
+  const method = options.method ?? 'GET';
+
   try {
     let response: Response;
 
@@ -155,8 +159,14 @@ export async function requestApi<T>(
       }
 
       response = await fetchImplementation(requestUrl, {
-        method: 'GET',
-        headers: { accept: 'application/json' },
+        method,
+        headers: {
+          accept: 'application/json',
+          ...(method === 'POST' ? { 'content-type': 'application/json' } : {}),
+        },
+        ...(method === 'POST'
+          ? { body: JSON.stringify(options.jsonBody) }
+          : {}),
         signal: controller.signal,
       });
     } catch {

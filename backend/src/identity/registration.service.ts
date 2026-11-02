@@ -1,15 +1,17 @@
+import { ApplicationError } from '../http/application-error.js';
+import type { EmailVerificationService } from './email-verification.service.js';
+import { type AccountRepository } from './account.repository.js';
 import type { PasswordService } from './password.service.js';
 import {
   registrationRequestSchema,
   type RegistrationAcknowledgement,
   type RegistrationRequest,
 } from './registration.schema.js';
-import { type AccountRepository } from './account.repository.js';
-import { ApplicationError } from '../http/application-error.js';
 
 export interface RegistrationServiceDependencies {
   accounts: AccountRepository;
   passwords: Pick<PasswordService, 'screenPassword' | 'hashPassword'>;
+  verification: Pick<EmailVerificationService, 'issueForAccount'>;
   /** Current server-approved Terms version; never accepted from request data. */
   termsVersion: string;
   now?: () => Date;
@@ -25,7 +27,7 @@ const ACKNOWLEDGEMENT: RegistrationAcknowledgement = {
 
 /**
  * Screens and hashes before persistence for every eligible request, including
- * duplicates. Neither operation runs inside a database transaction.
+ * duplicates. Account, token, and delivery-job writes share one transaction.
  */
 export function createRegistrationService(
   dependencies: RegistrationServiceDependencies,
@@ -67,19 +69,27 @@ export function createRegistrationService(
         validatedInput.password,
       );
 
-      await dependencies.accounts.createAccount({
-        firstName: validatedInput.firstName,
-        lastName: validatedInput.lastName,
-        email: validatedInput.email,
-        passwordHash,
-        status: 'pending_email_verification',
-        emailVerifiedAt: null,
-        termsAcceptedVersion: dependencies.termsVersion,
-        termsAcceptedAt: now(),
-      });
+      await dependencies.accounts.createAccount(
+        {
+          firstName: validatedInput.firstName,
+          lastName: validatedInput.lastName,
+          email: validatedInput.email,
+          passwordHash,
+          status: 'pending_email_verification',
+          emailVerifiedAt: null,
+          termsAcceptedVersion: dependencies.termsVersion,
+          termsAcceptedAt: now(),
+        },
+        async (accountId, transaction) => {
+          await dependencies.verification.issueForAccount(
+            accountId,
+            transaction,
+          );
+        },
+      );
 
-      // Created and duplicate-email submissions intentionally return the same
-      // acknowledgement; no account identity or existence signal is returned.
+      // The same acknowledgement follows commit for both new and duplicate
+      // emails. The duplicate path never runs the callback above.
       return ACKNOWLEDGEMENT;
     },
   };

@@ -12,6 +12,8 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:integration": "vitest run --config vitest.integration.config.ts",
+    "email:check": "tsx src/infrastructure/email/check-smtp.ts",
+    "email:worker": "tsx src/infrastructure/email/email-worker.ts",
     "db:check": "tsx src/db/check-connection.ts",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate"
@@ -24,6 +26,7 @@
     "dotenv": "17.2.3",
     "drizzle-orm": "0.45.4",
     "fastify": "5.12.7",
+    "nodemailer": "10.3.1",
     "pg": "8.23.0",
     "zod": "4.6.7"
   },

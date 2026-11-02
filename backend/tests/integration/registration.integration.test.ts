@@ -1,15 +1,24 @@
 import 'dotenv/config';
 import { randomUUID } from 'node:crypto';
-import { drizzle, type NodePgDatabase } from 'drizzle-orm/node-postgres';
 import { eq } from 'drizzle-orm';
+import { drizzle, type NodePgDatabase } from 'drizzle-orm/node-postgres';
 import { migrate } from 'drizzle-orm/node-postgres/migrator';
 import { Pool } from 'pg';
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import { parseTestDatabaseUrl } from '../../src/config/test-database.js';
+import { ApplicationError } from '../../src/http/application-error.js';
+import { users, userPermissions } from '../../src/db/accounts.schema.js';
 import {
   createAccountRepository,
   type AccountRepository,
 } from '../../src/identity/account.repository.js';
+import { createEmailDeliveryRepository } from '../../src/identity/email-delivery.repository.js';
+import {
+  createEmailDeliveryWorker,
+  type EmailWorkerDiagnostic,
+} from '../../src/identity/email-delivery-worker.service.js';
+import { createEmailVerificationRepository } from '../../src/identity/email-verification.repository.js';
+import { createEmailVerificationService } from '../../src/identity/email-verification.service.js';
 import { createRegistrationService } from '../../src/identity/registration.service.js';
 import {
   registrationRequestSchema,
@@ -20,12 +29,30 @@ import {
   verifyPassword,
   type PasswordService,
 } from '../../src/identity/password.service.js';
-import { ApplicationError } from '../../src/http/application-error.js';
-import { users, userPermissions } from '../../src/db/accounts.schema.js';
+import {
+  EmailTransportError,
+  type EmailTransport,
+  type OutboundEmail,
+} from '../../src/infrastructure/email/email-transport.js';
 
 const connectionString = parseTestDatabaseUrl(process.env);
 const TERMS_VERSION_FOR_TESTS = 'terms-v1';
 const ACCEPTED_AT_FOR_TESTS = new Date('2026-01-15T12:00:00.000Z');
+const TEST_QUEUE_CONFIG = {
+  activeKey: {
+    keyId: 'integration-test-key',
+    key: Buffer.alloc(32, 7),
+  },
+  frontendOrigin: 'http://localhost:5173',
+};
+const TEST_WORKER_CONFIG = {
+  pollIntervalMs: 1_000,
+  concurrency: 1,
+  leaseMs: 120_000,
+  retryBaseMs: 30_000,
+  retryMaxMs: 900_000,
+  maxAttempts: 5 as const,
+};
 
 let pool: Pool | undefined;
 let database: NodePgDatabase | undefined;
@@ -72,15 +99,25 @@ function makeInput(
 function makeService(
   screening: PasswordService['screenPassword'] = async () => 'clear',
   hashing: PasswordService['hashPassword'] = hashPasswordWithArgon2id,
+  jobId?: string,
 ) {
+  const now = () => new Date(ACCEPTED_AT_FOR_TESTS);
+  const verification = createEmailVerificationService({
+    repository: createEmailVerificationRepository(getDatabase()),
+    queueConfig: TEST_QUEUE_CONFIG,
+    now,
+    ...(jobId ? { createJobId: () => jobId } : {}),
+  });
+
   return createRegistrationService({
     accounts: getAccounts(),
     passwords: {
       screenPassword: screening,
       hashPassword: hashing,
     },
+    verification,
     termsVersion: TERMS_VERSION_FOR_TESTS,
-    now: () => new Date(ACCEPTED_AT_FOR_TESTS),
+    now,
   });
 }
 
@@ -100,6 +137,46 @@ async function withTestEmail<T>(
 
 async function findAccounts(email: string) {
   return getDatabase().select().from(users).where(eq(users.email, email));
+}
+
+async function findQueueCounts(email: string) {
+  const result = await getPool().query<{
+    token_count: number;
+    job_count: number;
+  }>(
+    `SELECT count(DISTINCT tokens.id)::int AS token_count,
+            count(DISTINCT jobs.id)::int AS job_count
+     FROM users
+     LEFT JOIN email_verification_tokens AS tokens
+       ON tokens.account_id = users.id
+     LEFT JOIN email_delivery_jobs AS jobs
+       ON jobs.verification_token_id = tokens.id
+     WHERE users.email = $1`,
+    [email],
+  );
+
+  return result.rows[0] ?? { token_count: 0, job_count: 0 };
+}
+
+async function findJobState(email: string) {
+  const result = await getPool().query<{
+    status: string;
+    attempt_count: number;
+    payload_present: boolean;
+  }>(
+    `SELECT jobs.status,
+            jobs.attempt_count,
+            jobs.encrypted_payload IS NOT NULL AS payload_present
+     FROM users
+     JOIN email_verification_tokens AS tokens
+       ON tokens.account_id = users.id
+     JOIN email_delivery_jobs AS jobs
+       ON jobs.verification_token_id = tokens.id
+     WHERE users.email = $1`,
+    [email],
+  );
+
+  return result.rows[0];
 }
 
 beforeAll(async () => {
@@ -138,7 +215,7 @@ afterAll(async () => {
 });
 
 describe('registration service and repository', () => {
-  it('creates an unverified account with a verifiable hash and server Terms metadata', async () => {
+  it('creates an unverified account, token and job with safe defaults', async () => {
     const email = `registration-${randomUUID()}@example.test`;
 
     await withTestEmail(email, async () => {
@@ -159,24 +236,27 @@ describe('registration service and repository', () => {
         verifyPassword(account!.passwordHash, input.password),
       ).resolves.toBe(true);
 
+      expect(await findQueueCounts(email)).toEqual({
+        token_count: 1,
+        job_count: 1,
+      });
+
       const permissions = await getDatabase()
         .select()
         .from(userPermissions)
         .where(eq(userPermissions.userId, account!.id));
 
-      // Administrator permissions are separate and are never assigned by
-      // public registration; buying capability is not an admin permission row.
       expect(permissions).toEqual([]);
     });
   });
 
-  it('returns the same acknowledgement for a duplicate without changing the account', async () => {
+  it('returns the same acknowledgement for duplicates without changing account or queue data', async () => {
     const email = `duplicate-${randomUUID()}@example.test`;
 
     await withTestEmail(email, async () => {
-      const firstInput = makeInput(email);
-      const firstResponse = await makeService().register(firstInput);
+      const firstResponse = await makeService().register(makeInput(email));
       const [before] = await findAccounts(email);
+      const beforeCounts = await findQueueCounts(email);
       const screenSpy = vi.fn<PasswordService['screenPassword']>(
         async () => 'clear',
       );
@@ -197,10 +277,11 @@ describe('registration service and repository', () => {
       expect(screenSpy).toHaveBeenCalledOnce();
       expect(hashSpy).toHaveBeenCalledOnce();
       expect(after).toEqual(before);
+      expect(await findQueueCounts(email)).toEqual(beforeCounts);
     });
   });
 
-  it('allows concurrent duplicate submissions to create only one account', async () => {
+  it('allows concurrent duplicate submissions to create only one account, token and job', async () => {
     const email = `concurrent-${randomUUID()}@example.test`;
 
     await withTestEmail(email, async () => {
@@ -217,25 +298,30 @@ describe('registration service and repository', () => {
         service.register(input),
         service.register(input),
       ]);
-      const savedAccounts = await findAccounts(email);
 
       expect(responses[0]).toEqual(responses[1]);
-      expect(savedAccounts).toHaveLength(1);
+      expect(await findAccounts(email)).toHaveLength(1);
+      expect(await findQueueCounts(email)).toEqual({
+        token_count: 1,
+        job_count: 1,
+      });
       expect(screenSpy).toHaveBeenCalledTimes(2);
       expect(hashSpy).toHaveBeenCalledTimes(2);
     });
   });
 
-  it('does not create an account for a compromised password', async () => {
+  it('does not create related records for a compromised password', async () => {
     const email = `compromised-${randomUUID()}@example.test`;
+    const hashSpy = vi.fn<PasswordService['hashPassword']>(
+      async () => '$must-not-be-used$',
+    );
 
     await withTestEmail(email, async () => {
-      const hashSpy = vi.fn<PasswordService['hashPassword']>(
-        async () => '$must-not-be-used$',
-      );
-      const service = makeService(async () => 'compromised', hashSpy);
-
-      await expect(service.register(makeInput(email))).rejects.toMatchObject({
+      await expect(
+        makeService(async () => 'compromised', hashSpy).register(
+          makeInput(email),
+        ),
+      ).rejects.toMatchObject({
         name: 'ApplicationError',
         code: 'VALIDATION_ERROR',
         details: [
@@ -248,10 +334,14 @@ describe('registration service and repository', () => {
 
       expect(hashSpy).not.toHaveBeenCalled();
       expect(await findAccounts(email)).toEqual([]);
+      expect(await findQueueCounts(email)).toEqual({
+        token_count: 0,
+        job_count: 0,
+      });
     });
   });
 
-  it('does not create an account when password screening is unavailable', async () => {
+  it('does not create related records when password screening is unavailable', async () => {
     const email = `screening-outage-${randomUUID()}@example.test`;
     const safeOutage = new ApplicationError(
       'SERVICE_UNAVAILABLE',
@@ -266,6 +356,124 @@ describe('registration service and repository', () => {
       ).rejects.toBe(safeOutage);
 
       expect(await findAccounts(email)).toEqual([]);
+      expect(await findQueueCounts(email)).toEqual({
+        token_count: 0,
+        job_count: 0,
+      });
+    });
+  });
+
+  it('rolls back the account and token when queue-job creation fails', async () => {
+    const existingEmail = `rollback-existing-${randomUUID()}@example.test`;
+    const rejectedEmail = `rollback-rejected-${randomUUID()}@example.test`;
+    const collidingJobId = randomUUID();
+
+    await withTestEmail(existingEmail, async () =>
+      withTestEmail(rejectedEmail, async () => {
+        await makeService(
+          async () => 'clear',
+          async () => '$rollback-test-hash$existing',
+          collidingJobId,
+        ).register(makeInput(existingEmail));
+
+        await expect(
+          makeService(
+            async () => 'clear',
+            async () => '$rollback-test-hash$rejected',
+            collidingJobId,
+          ).register(makeInput(rejectedEmail)),
+        ).rejects.toThrow();
+
+        expect(await findAccounts(rejectedEmail)).toEqual([]);
+        expect(await findQueueCounts(rejectedEmail)).toEqual({
+          token_count: 0,
+          job_count: 0,
+        });
+        expect(await findQueueCounts(existingEmail)).toEqual({
+          token_count: 1,
+          job_count: 1,
+        });
+      }),
+    );
+  });
+
+  it('commits registration independently of SMTP and delivers through the fake worker', async () => {
+    const email = `worker-delivery-${randomUUID()}@example.test`;
+
+    await withTestEmail(email, async () => {
+      const acknowledgement = await makeService().register(makeInput(email));
+      const messages: OutboundEmail[] = [];
+      const transport: EmailTransport = {
+        async send(message) {
+          messages.push(message);
+        },
+      };
+      const worker = createEmailDeliveryWorker({
+        repository: createEmailDeliveryRepository(getDatabase()),
+        transport,
+        queueConfig: TEST_QUEUE_CONFIG,
+        workerConfig: TEST_WORKER_CONFIG,
+        // Match the fixed issuance clock so this test token remains due.
+        now: () => new Date(ACCEPTED_AT_FOR_TESTS),
+      });
+
+      expect(acknowledgement).toEqual({
+        data: { message: 'Registration request received.' },
+      });
+      expect(await worker.runOnce()).toBe(1);
+      expect(messages).toHaveLength(1);
+      expect(messages[0]?.to).toBe(email);
+      expect(messages[0]?.subject).toBe('Verify your Tennis Xpress email');
+
+      const job = await findJobState(email);
+      expect(job).toEqual({
+        status: 'sent',
+        attempt_count: 1,
+        payload_present: false,
+      });
+    });
+  });
+
+  it('keeps queued work when the worker encounters temporary SMTP unavailability', async () => {
+    const email = `worker-outage-${randomUUID()}@example.test`;
+
+    await withTestEmail(email, async () => {
+      const acknowledgement = await makeService().register(makeInput(email));
+      const diagnostics: EmailWorkerDiagnostic[] = [];
+      const transport: EmailTransport = {
+        async send() {
+          throw new EmailTransportError('transient');
+        },
+      };
+      const worker = createEmailDeliveryWorker({
+        repository: createEmailDeliveryRepository(getDatabase()),
+        transport,
+        queueConfig: TEST_QUEUE_CONFIG,
+        workerConfig: TEST_WORKER_CONFIG,
+        now: () => new Date(ACCEPTED_AT_FOR_TESTS),
+        onDiagnostic: (event) => diagnostics.push(event),
+      });
+
+      expect(acknowledgement).toEqual({
+        data: { message: 'Registration request received.' },
+      });
+      expect(await worker.runOnce()).toBe(1);
+      expect(diagnostics).toContainEqual(
+        expect.objectContaining({
+          status: 'retry_scheduled',
+          classification: 'temporary_smtp',
+        }),
+      );
+      expect(await findAccounts(email)).toHaveLength(1);
+      expect(await findQueueCounts(email)).toEqual({
+        token_count: 1,
+        job_count: 1,
+      });
+      expect(await findJobState(email)).toEqual({
+        status: 'pending',
+        attempt_count: 1,
+        payload_present: true,
+      });
     });
   });
 
@@ -274,16 +482,19 @@ describe('registration service and repository', () => {
 
     await withTestEmail(email, async () => {
       await expect(
-        getAccounts().createAccount({
-          firstName: ' ',
-          lastName: 'Valid',
-          email,
-          passwordHash: '$test-only$hash',
-          status: 'pending_email_verification',
-          emailVerifiedAt: null,
-          termsAcceptedVersion: TERMS_VERSION_FOR_TESTS,
-          termsAcceptedAt: ACCEPTED_AT_FOR_TESTS,
-        }),
+        getAccounts().createAccount(
+          {
+            firstName: ' ',
+            lastName: 'Valid',
+            email,
+            passwordHash: '$test-only$hash',
+            status: 'pending_email_verification',
+            emailVerifiedAt: null,
+            termsAcceptedVersion: TERMS_VERSION_FOR_TESTS,
+            termsAcceptedAt: ACCEPTED_AT_FOR_TESTS,
+          },
+          async () => undefined,
+        ),
       ).rejects.toMatchObject({
         cause: {
           code: '23514',
@@ -292,24 +503,6 @@ describe('registration service and repository', () => {
       });
 
       expect(await findAccounts(email)).toEqual([]);
-    });
-  });
-
-  it('confirms account creation requires no second write or transaction', async () => {
-    const email = `single-write-${randomUUID()}@example.test`;
-
-    await withTestEmail(email, async () => {
-      await makeService().register(makeInput(email));
-
-      const [account] = await findAccounts(email);
-      expect(account).toBeDefined();
-
-      const permissions = await getDatabase()
-        .select()
-        .from(userPermissions)
-        .where(eq(userPermissions.userId, account!.id));
-
-      expect(permissions).toEqual([]);
     });
   });
 });

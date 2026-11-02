@@ -1,5 +1,6 @@
 import type { NodePgDatabase } from 'drizzle-orm/node-postgres';
 import { users } from '../db/accounts.schema.js';
+import type { DatabaseTransactionExecutor } from '../db/client.js';
 
 export interface NewAccountRecord {
   firstName: string;
@@ -14,8 +15,16 @@ export interface NewAccountRecord {
 
 export type CreateAccountResult = 'created' | 'duplicate_email';
 
+export type AfterAccountInsert = (
+  accountId: string,
+  transaction: DatabaseTransactionExecutor,
+) => Promise<void>;
+
 export interface AccountRepository {
-  createAccount(account: NewAccountRecord): Promise<CreateAccountResult>;
+  createAccount(
+    account: NewAccountRecord,
+    afterInsert: AfterAccountInsert,
+  ): Promise<CreateAccountResult>;
 }
 
 interface PostgreSqlConstraintError extends Error {
@@ -49,16 +58,28 @@ function isNormalizedEmailUniqueViolation(error: unknown): boolean {
 }
 
 /**
- * Inserts one account. Only the named normalized-email unique constraint is
- * converted to a duplicate result; all other persistence errors propagate.
+ * Inserts the account and runs queue creation on the same transaction.
+ * Only the normalized-email unique violation becomes a duplicate result.
  */
 export function createAccountRepository(
   database: NodePgDatabase,
 ): AccountRepository {
   return {
-    async createAccount(account) {
+    async createAccount(account, afterInsert) {
       try {
-        await database.insert(users).values(account);
+        await database.transaction(async (transaction) => {
+          const [createdAccount] = await transaction
+            .insert(users)
+            .values(account)
+            .returning({ id: users.id });
+
+          if (!createdAccount) {
+            throw new Error('Account insert returned no row.');
+          }
+
+          await afterInsert(createdAccount.id, transaction);
+        });
+
         return 'created';
       } catch (error) {
         if (isNormalizedEmailUniqueViolation(error)) {

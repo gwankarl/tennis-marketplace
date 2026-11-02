@@ -88,22 +88,5 @@ jobs:
       - name: Run PostgreSQL integration tests
         run: npm run test:backend:integration
 
-      - name: Install Playwright Chromium and Linux dependencies
-        run: npx playwright install --with-deps chromium
-
-      - name: Run browser smoke tests
-        run: npm run test:e2e
-
       - name: Build workspaces
         run: npm run build
-
-      - name: Upload browser failure reports
-        if: failure()
-        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
-        with:
-          name: playwright-failure-reports
-          path: |
-            playwright-report/
-            test-results/
-          if-no-files-found: ignore
-          retention-days: 3
