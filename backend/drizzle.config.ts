@@ -9,6 +9,7 @@ export default defineConfig({
     './src/modules/identity/verification/email-verification.schema.ts',
     './src/modules/identity/passwords/password-reset-token.schema.ts',
     './src/modules/identity/verification/delivery/email-delivery-job.schema.ts',
+    './src/modules/seller-onboarding/seller-application.schema.ts',
   ],
   out: './drizzle',
   dialect: 'postgresql',

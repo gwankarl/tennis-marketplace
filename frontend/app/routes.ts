@@ -16,6 +16,7 @@ export default [
   route('reset-password/submit', 'routes/reset-password-submit.ts'),
   layout('routes/workspace-layout.tsx', [
     route('account', 'routes/account.tsx'),
+    route('seller-application', 'routes/seller-application.tsx'),
     route('profile', 'routes/profile.tsx'),
     route('seller', 'routes/seller.tsx'),
     route('admin', 'routes/admin.tsx'),

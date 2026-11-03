@@ -16,6 +16,8 @@ import type { UserProfileRoutesOptions } from './modules/identity/accounts/profi
 import { userProfileRoutes } from './modules/identity/accounts/profile.routes.js';
 import type { PasswordResetRoutesOptions } from './modules/identity/passwords/password-reset.routes.js';
 import { passwordResetRoutes } from './modules/identity/passwords/password-reset.routes.js';
+import type { SellerApplicationRoutesOptions } from './modules/seller-onboarding/seller-application.routes.js';
+import { sellerApplicationRoutes } from './modules/seller-onboarding/seller-application.routes.js';
 
 interface BuildAppOptions {
   loggerStream?: LoggerStream;
@@ -25,6 +27,7 @@ interface BuildAppOptions {
   authentication?: AuthenticationRoutesOptions;
   userProfile?: UserProfileRoutesOptions;
   passwordReset?: PasswordResetRoutesOptions;
+  sellerApplication?: SellerApplicationRoutesOptions;
   closeResources?: () => Promise<void>;
 }
 
@@ -74,6 +77,10 @@ export function buildApp(options: BuildAppOptions = {}) {
 
   if (options.passwordReset) {
     app.register(passwordResetRoutes, options.passwordReset);
+  }
+
+  if (options.sellerApplication) {
+    app.register(sellerApplicationRoutes, options.sellerApplication);
   }
 
   if (options.closeResources) {

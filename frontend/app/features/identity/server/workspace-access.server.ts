@@ -34,7 +34,7 @@ function privateHeaders(): Headers {
  */
 export async function loadWorkspaceAccess(
   request: Request,
-  returnTo: '/account' | '/seller' | '/admin',
+  returnTo: '/account' | '/seller' | '/admin' | '/seller-application',
   requiredWorkspace?: WorkspaceKey,
 ): Promise<WorkspaceAccessResult> {
   const headers = privateHeaders();

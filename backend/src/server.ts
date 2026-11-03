@@ -24,6 +24,8 @@ import { createPasswordResetRequestRepository } from './modules/identity/passwor
 import { createPasswordResetRequestService } from './modules/identity/passwords/password-reset-request.service.js';
 import { createPasswordResetRepository } from './modules/identity/passwords/password-reset.repository.js';
 import { createPasswordResetService } from './modules/identity/passwords/password-reset.service.js';
+import { createSellerApplicationRepository } from './modules/seller-onboarding/seller-application.repository.js';
+import { createSellerApplicationService } from './modules/seller-onboarding/seller-application.service.js';
 
 const verificationService = createEmailVerificationService({
   repository: createEmailVerificationRepository(db),
@@ -67,8 +69,13 @@ const passwordResetService = createPasswordResetService({
 const sessionService = createSessionService({
   repository: userSessions,
 });
+
 const userProfileService = createUserProfileService({
   accounts: accountRepository,
+});
+
+const sellerApplicationService = createSellerApplicationService({
+  repository: createSellerApplicationRepository(db),
 });
 
 let app: ReturnType<typeof buildApp> | undefined;
@@ -150,6 +157,10 @@ async function start(): Promise<void> {
         reset: passwordResetService,
         ipRateLimitMax: env.PASSWORD_RESET_IP_RATE_LIMIT_MAX,
         ipRateLimitWindowMs: env.PASSWORD_RESET_IP_RATE_LIMIT_WINDOW_MS,
+      },
+      sellerApplication: {
+        service: sellerApplicationService,
+        sessions: sessionService,
       },
       closeResources: closeDatabase,
     });

@@ -1,0 +1,46 @@
+.seller-draft {
+  box-sizing: border-box;
+  margin: 1rem auto;
+  max-width: 44rem;
+  padding: 0 1rem;
+}
+
+.seller-draft__field {
+  display: grid;
+  gap: 0.35rem;
+  margin: 1rem 0;
+}
+
+.seller-draft__field input,
+.seller-draft__field select,
+.seller-draft__field textarea {
+  box-sizing: border-box;
+  font: inherit;
+  max-width: 100%;
+  padding: 0.6rem;
+}
+
+.seller-draft__field-error {
+  color: #a32020;
+  margin: 0;
+}
+
+.seller-draft__errors {
+  border: 1px solid #a32020;
+  border-radius: 0.35rem;
+  margin: 1rem 0;
+  padding: 1rem;
+}
+
+.seller-draft__commercial {
+  border: 1px solid #d4dde4;
+  border-radius: 0.35rem;
+  margin: 1.5rem 0;
+  padding: 0.5rem 1rem;
+}
+
+.seller-draft button {
+  font: inherit;
+  margin: 0.5rem 0 2rem;
+  padding: 0.65rem 1rem;
+}

@@ -57,6 +57,13 @@
       "when": 1793718104874,
       "tag": "0007_password_reset_delivery_jobs",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1793729378933,
+      "tag": "0008_seller_application_drafts",
+      "breakpoints": true
     }
   ]
 }
