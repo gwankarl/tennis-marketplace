@@ -20,6 +20,10 @@ import { createUserSessionRepository } from './modules/identity/sessions/user-se
 import { createLoginService } from './modules/identity/sessions/login.service.js';
 import { createSessionService } from './modules/identity/sessions/session.service.js';
 import { createUserProfileService } from './modules/identity/accounts/profile.service.js';
+import { createPasswordResetRequestRepository } from './modules/identity/passwords/password-reset-request.repository.js';
+import { createPasswordResetRequestService } from './modules/identity/passwords/password-reset-request.service.js';
+import { createPasswordResetRepository } from './modules/identity/passwords/password-reset.repository.js';
+import { createPasswordResetService } from './modules/identity/passwords/password-reset.service.js';
 
 const verificationService = createEmailVerificationService({
   repository: createEmailVerificationRepository(db),
@@ -35,6 +39,14 @@ const resendVerificationService = createResendVerificationService({
   maxJobsPerHour: env.RESEND_VERIFICATION_ACCOUNT_MAX_PER_HOUR,
 });
 
+const passwordResetRequestService = createPasswordResetRequestService({
+  repository: createPasswordResetRequestRepository(db),
+  // Queue secrets are read only when an eligible request enqueues a job.
+  queueConfig: () => parseEmailQueueConfig(process.env),
+  cooldownMs: env.PASSWORD_RESET_ACCOUNT_COOLDOWN_MS,
+  maxJobsPerHour: env.PASSWORD_RESET_ACCOUNT_MAX_PER_HOUR,
+});
+
 const accountRepository = createAccountRepository(db);
 
 const registrationService = createRegistrationService({
@@ -45,6 +57,12 @@ const registrationService = createRegistrationService({
 });
 
 const userSessions = createUserSessionRepository(db);
+
+const passwordResetService = createPasswordResetService({
+  repository: createPasswordResetRepository(db),
+  sessions: userSessions,
+  passwords: { screenPassword, hashPassword },
+});
 
 const sessionService = createSessionService({
   repository: userSessions,
@@ -126,6 +144,12 @@ async function start(): Promise<void> {
       userProfile: {
         service: userProfileService,
         sessions: sessionService,
+      },
+      passwordReset: {
+        requests: passwordResetRequestService,
+        reset: passwordResetService,
+        ipRateLimitMax: env.PASSWORD_RESET_IP_RATE_LIMIT_MAX,
+        ipRateLimitWindowMs: env.PASSWORD_RESET_IP_RATE_LIMIT_WINDOW_MS,
       },
       closeResources: closeDatabase,
     });

@@ -60,6 +60,22 @@ const backendEnvSchema = z.object({
     (value) => (value === undefined ? 60_000 : Number(value)),
     z.number().int().min(1).max(86_400_000),
   ),
+  PASSWORD_RESET_IP_RATE_LIMIT_MAX: z.preprocess(
+    (value) => (value === undefined ? 5 : Number(value)),
+    z.number().int().min(1).max(1000),
+  ),
+  PASSWORD_RESET_IP_RATE_LIMIT_WINDOW_MS: z.preprocess(
+    (value) => (value === undefined ? 3_600_000 : Number(value)),
+    z.number().int().min(1).max(86_400_000),
+  ),
+  PASSWORD_RESET_ACCOUNT_MAX_PER_HOUR: z.preprocess(
+    (value) => (value === undefined ? 5 : Number(value)),
+    z.number().int().min(1).max(1000),
+  ),
+  PASSWORD_RESET_ACCOUNT_COOLDOWN_MS: z.preprocess(
+    (value) => (value === undefined ? 60_000 : Number(value)),
+    z.number().int().min(1).max(86_400_000),
+  ),
   TERMS_VERSION: z.string().trim().min(1).max(64),
 });
 

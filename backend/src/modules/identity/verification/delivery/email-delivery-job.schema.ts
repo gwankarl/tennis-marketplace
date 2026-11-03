@@ -11,9 +11,11 @@ import {
   varchar,
   text,
 } from 'drizzle-orm/pg-core';
+import { passwordResetTokens } from '../../passwords/password-reset-token.schema.js';
 import { emailVerificationTokens } from '../email-verification.schema.js';
 
 export const EMAIL_VERIFICATION_PURPOSE = 'email_verification' as const;
+export const PASSWORD_RESET_PURPOSE = 'password_reset' as const;
 
 export const emailDeliveryJobStatus = pgEnum('email_delivery_job_status', [
   'pending',
@@ -27,9 +29,14 @@ export const emailDeliveryJobs = pgTable(
   'email_delivery_jobs',
   {
     id: uuid('id').primaryKey(),
-    verificationTokenId: uuid('verification_token_id')
-      .notNull()
-      .references(() => emailVerificationTokens.id, { onDelete: 'cascade' }),
+    verificationTokenId: uuid('verification_token_id').references(
+      () => emailVerificationTokens.id,
+      { onDelete: 'cascade' },
+    ),
+    passwordResetTokenId: uuid('password_reset_token_id').references(
+      () => passwordResetTokens.id,
+      { onDelete: 'cascade' },
+    ),
     purpose: varchar('purpose', { length: 32 }).notNull(),
     status: emailDeliveryJobStatus('status').notNull().default('pending'),
     attemptCount: integer('attempt_count').notNull().default(0),
@@ -64,7 +71,19 @@ export const emailDeliveryJobs = pgTable(
   (table) => [
     check(
       'email_delivery_jobs_purpose_check',
-      sql`${table.purpose} = 'email_verification'`,
+      sql`${table.purpose} IN ('email_verification', 'password_reset')`,
+    ),
+    check(
+      'email_delivery_jobs_token_purpose_check',
+      sql`(
+        ${table.purpose} = 'email_verification'
+        AND ${table.verificationTokenId} IS NOT NULL
+        AND ${table.passwordResetTokenId} IS NULL
+      ) OR (
+        ${table.purpose} = 'password_reset'
+        AND ${table.verificationTokenId} IS NULL
+        AND ${table.passwordResetTokenId} IS NOT NULL
+      )`,
     ),
     check(
       'email_delivery_jobs_attempt_count_bounded',
@@ -97,6 +116,9 @@ export const emailDeliveryJobs = pgTable(
     uniqueIndex('email_delivery_jobs_token_unique').on(
       table.verificationTokenId,
     ),
+    uniqueIndex('email_delivery_jobs_password_reset_token_unique')
+      .on(table.passwordResetTokenId)
+      .where(sql`${table.passwordResetTokenId} IS NOT NULL`),
     index('email_delivery_jobs_schedule_idx').on(
       table.status,
       table.availableAt,

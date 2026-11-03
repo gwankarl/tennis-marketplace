@@ -16,6 +16,14 @@ export class ResendVerificationRateLimitError extends Error {
   }
 }
 
+/** Trusted marker emitted only by the password-reset route's IP limiter. */
+export class PasswordResetRateLimitError extends Error {
+  constructor(readonly retryAfterSeconds: number) {
+    super('Password reset request limit exceeded.');
+    this.name = 'PasswordResetRateLimitError';
+  }
+}
+
 /** Trusted marker emitted only by the login service's configured limiter. */
 export class LoginRateLimitError extends Error {
   constructor(readonly retryAfterSeconds: number) {

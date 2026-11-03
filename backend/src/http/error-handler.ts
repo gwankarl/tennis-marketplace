@@ -16,6 +16,7 @@ import {
   RegistrationRateLimitError,
   ResendVerificationRateLimitError,
   LoginRateLimitError,
+  PasswordResetRateLimitError,
 } from './rate-limit-error.js';
 
 const APPLICATION_ERROR_STATUS: Record<ApplicationErrorCode, number> = {
@@ -224,6 +225,18 @@ export function registerErrorHandlers(app: FastifyInstance): void {
         error instanceof RegistrationRateLimitError
           ? 'Too many registration attempts. Try again later.'
           : 'Too many resend requests. Try again later.',
+      );
+    }
+
+    if (error instanceof PasswordResetRateLimitError) {
+      reply.header('retry-after', String(error.retryAfterSeconds));
+
+      return sendError(
+        reply,
+        request.id,
+        429,
+        'RATE_LIMITED',
+        'Too many password reset requests. Try again later.',
       );
     }
 

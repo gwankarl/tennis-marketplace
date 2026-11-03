@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import { accountNameSchema as nameSchema } from '../accounts/account-name.schema.js';
 
-const passwordSchema = z.string().superRefine((value, context) => {
+export const passwordSchema = z.string().superRefine((value, context) => {
   const codePointLength = Array.from(value).length;
 
   if (codePointLength < 15 || codePointLength > 128) {

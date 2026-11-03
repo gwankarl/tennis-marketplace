@@ -4,7 +4,7 @@ import type { NodePgDatabase } from 'drizzle-orm/node-postgres';
 export interface ClaimedEmailJob {
   id: string;
   claimId: string;
-  purpose: 'email_verification';
+  purpose: 'email_verification' | 'password_reset';
   attemptCount: number;
   keyId: string;
   encryptedPayload: string;
@@ -47,7 +47,7 @@ export interface EmailDeliveryRepository {
 
 interface ClaimedRow {
   id: string;
-  purpose: 'email_verification';
+  purpose: 'email_verification' | 'password_reset';
   attempt_count: number;
   encryption_key_id: string;
   encrypted_payload: string;
@@ -86,25 +86,50 @@ async function readClaim(
       jobs.encryption_key_id,
       jobs.encrypted_payload,
       jobs.expires_at AS job_expires_at,
-      tokens.expires_at AS token_expires_at,
-      tokens.email_address AS token_email,
+      COALESCE(
+        verification_tokens.expires_at,
+        reset_tokens.expires_at
+      ) AS token_expires_at,
+      COALESCE(
+        verification_tokens.email_address,
+        reset_tokens.email_address
+      ) AS token_email,
       users.email AS account_email
     FROM email_delivery_jobs AS jobs
-    JOIN email_verification_tokens AS tokens
-      ON tokens.id = jobs.verification_token_id
-    JOIN users ON users.id = tokens.account_id
+    LEFT JOIN email_verification_tokens AS verification_tokens
+      ON verification_tokens.id = jobs.verification_token_id
+    LEFT JOIN password_reset_tokens AS reset_tokens
+      ON reset_tokens.id = jobs.password_reset_token_id
+    JOIN users
+      ON users.id = COALESCE(
+        verification_tokens.account_id,
+        reset_tokens.account_id
+      )
     WHERE jobs.id = ${jobId}::uuid
       AND jobs.status = 'leased'
       AND jobs.lease_owner = ${claimId}
       AND jobs.lease_expires_at > ${now}
-      AND jobs.purpose = 'email_verification'
       AND jobs.expires_at > ${now}
-      AND tokens.expires_at > ${now}
-      AND tokens.consumed_at IS NULL
-      AND tokens.invalidated_at IS NULL
-      AND tokens.email_address = users.email
-      AND users.status = 'pending_email_verification'
-      AND users.email_verified_at IS NULL
+      AND (
+        (
+          jobs.purpose = 'email_verification'
+          AND verification_tokens.expires_at > ${now}
+          AND verification_tokens.consumed_at IS NULL
+          AND verification_tokens.invalidated_at IS NULL
+          AND verification_tokens.email_address = users.email
+          AND users.status = 'pending_email_verification'
+          AND users.email_verified_at IS NULL
+        )
+        OR (
+          jobs.purpose = 'password_reset'
+          AND reset_tokens.expires_at > ${now}
+          AND reset_tokens.consumed_at IS NULL
+          AND reset_tokens.invalidated_at IS NULL
+          AND reset_tokens.email_address = users.email
+          AND users.status = 'active'
+          AND users.email_verified_at IS NOT NULL
+        )
+      )
     LIMIT 1
   `);
 
@@ -143,17 +168,37 @@ export function createEmailDeliveryRepository(
           WHERE jobs.status IN ('pending', 'leased')
             AND (
               jobs.expires_at <= ${now}
-              OR NOT EXISTS (
-                SELECT 1
-                FROM email_verification_tokens AS tokens
-                JOIN users ON users.id = tokens.account_id
-                WHERE tokens.id = jobs.verification_token_id
-                  AND tokens.expires_at > ${now}
-                  AND tokens.consumed_at IS NULL
-                  AND tokens.invalidated_at IS NULL
-                  AND tokens.email_address = users.email
-                  AND users.status = 'pending_email_verification'
-                  AND users.email_verified_at IS NULL
+              OR (
+                jobs.purpose = 'email_verification'
+                AND NOT EXISTS (
+                  SELECT 1
+                  FROM email_verification_tokens AS verification_tokens
+                  JOIN users
+                    ON users.id = verification_tokens.account_id
+                  WHERE verification_tokens.id = jobs.verification_token_id
+                    AND verification_tokens.expires_at > ${now}
+                    AND verification_tokens.consumed_at IS NULL
+                    AND verification_tokens.invalidated_at IS NULL
+                    AND verification_tokens.email_address = users.email
+                    AND users.status = 'pending_email_verification'
+                    AND users.email_verified_at IS NULL
+                )
+              )
+              OR (
+                jobs.purpose = 'password_reset'
+                AND NOT EXISTS (
+                  SELECT 1
+                  FROM password_reset_tokens AS reset_tokens
+                  JOIN users
+                    ON users.id = reset_tokens.account_id
+                  WHERE reset_tokens.id = jobs.password_reset_token_id
+                    AND reset_tokens.expires_at > ${now}
+                    AND reset_tokens.consumed_at IS NULL
+                    AND reset_tokens.invalidated_at IS NULL
+                    AND reset_tokens.email_address = users.email
+                    AND users.status = 'active'
+                    AND users.email_verified_at IS NOT NULL
+                )
               )
             )
           RETURNING jobs.id
@@ -176,18 +221,37 @@ export function createEmailDeliveryRepository(
           WITH next_job AS (
             SELECT jobs.id
             FROM email_delivery_jobs AS jobs
-            JOIN email_verification_tokens AS tokens
-              ON tokens.id = jobs.verification_token_id
-            JOIN users ON users.id = tokens.account_id
-            WHERE jobs.purpose = 'email_verification'
-              AND jobs.expires_at > ${now}
-              AND tokens.expires_at > ${now}
-              AND tokens.consumed_at IS NULL
-              AND tokens.invalidated_at IS NULL
-              AND tokens.email_address = users.email
-              AND users.status = 'pending_email_verification'
-              AND users.email_verified_at IS NULL
+            LEFT JOIN email_verification_tokens AS verification_tokens
+              ON verification_tokens.id = jobs.verification_token_id
+            LEFT JOIN password_reset_tokens AS reset_tokens
+              ON reset_tokens.id = jobs.password_reset_token_id
+            JOIN users
+              ON users.id = COALESCE(
+                verification_tokens.account_id,
+                reset_tokens.account_id
+              )
+            WHERE jobs.expires_at > ${now}
               AND jobs.attempt_count < ${maxAttempts}
+              AND (
+                (
+                  jobs.purpose = 'email_verification'
+                  AND verification_tokens.expires_at > ${now}
+                  AND verification_tokens.consumed_at IS NULL
+                  AND verification_tokens.invalidated_at IS NULL
+                  AND verification_tokens.email_address = users.email
+                  AND users.status = 'pending_email_verification'
+                  AND users.email_verified_at IS NULL
+                )
+                OR (
+                  jobs.purpose = 'password_reset'
+                  AND reset_tokens.expires_at > ${now}
+                  AND reset_tokens.consumed_at IS NULL
+                  AND reset_tokens.invalidated_at IS NULL
+                  AND reset_tokens.email_address = users.email
+                  AND users.status = 'active'
+                  AND users.email_verified_at IS NOT NULL
+                )
+              )
               AND (
                 (jobs.status = 'pending' AND jobs.available_at <= ${now})
                 OR (

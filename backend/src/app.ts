@@ -14,6 +14,8 @@ import type { AuthenticationRoutesOptions } from './modules/identity/sessions/au
 import { authenticationRoutes } from './modules/identity/sessions/auth.routes.js';
 import type { UserProfileRoutesOptions } from './modules/identity/accounts/profile.routes.js';
 import { userProfileRoutes } from './modules/identity/accounts/profile.routes.js';
+import type { PasswordResetRoutesOptions } from './modules/identity/passwords/password-reset.routes.js';
+import { passwordResetRoutes } from './modules/identity/passwords/password-reset.routes.js';
 
 interface BuildAppOptions {
   loggerStream?: LoggerStream;
@@ -22,6 +24,7 @@ interface BuildAppOptions {
   emailVerification?: EmailVerificationRoutesOptions;
   authentication?: AuthenticationRoutesOptions;
   userProfile?: UserProfileRoutesOptions;
+  passwordReset?: PasswordResetRoutesOptions;
   closeResources?: () => Promise<void>;
 }
 
@@ -67,6 +70,10 @@ export function buildApp(options: BuildAppOptions = {}) {
 
   if (options.userProfile) {
     app.register(userProfileRoutes, options.userProfile);
+  }
+
+  if (options.passwordReset) {
+    app.register(passwordResetRoutes, options.passwordReset);
   }
 
   if (options.closeResources) {

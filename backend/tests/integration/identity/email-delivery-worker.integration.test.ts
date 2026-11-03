@@ -236,7 +236,7 @@ describe('PostgreSQL email delivery worker', () => {
           serialized: row.encrypted_payload,
         },
         row.id,
-        row.purpose,
+        EMAIL_VERIFICATION_PURPOSE,
         queueConfig,
       );
 

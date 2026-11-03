@@ -4,11 +4,17 @@ import type { EmailWorkerConfig } from '../../../../config/email-worker-env.js';
 import {
   EmailTransportError,
   type EmailTransport,
+  type OutboundEmail,
 } from '../../../../infrastructure/email/email-transport.js';
+import {
+  PASSWORD_RESET_PURPOSE,
+  EMAIL_VERIFICATION_PURPOSE,
+} from './email-delivery-job.schema.js';
 import {
   decryptDeliveryPayload,
   EncryptedDeliveryPayloadError,
 } from './encrypted-delivery-payload.js';
+import { renderPasswordResetEmail } from '../../passwords/password-reset-email.js';
 import { renderVerificationEmail } from './verification-email.js';
 import type {
   EmailDeliveryRepository,
@@ -209,14 +215,31 @@ export function createEmailDeliveryWorker(
       return true;
     }
 
-    let message;
+    let message: OutboundEmail;
     try {
-      message = renderVerificationEmail(
-        payload,
-        dependencies.queueConfig.frontendOrigin,
-        current.accountEmail,
-        current.tokenExpiresAt,
-      );
+      if (
+        current.purpose === PASSWORD_RESET_PURPOSE &&
+        'passwordResetUrl' in payload
+      ) {
+        message = renderPasswordResetEmail(
+          payload,
+          dependencies.queueConfig.frontendOrigin,
+          current.accountEmail,
+          current.tokenExpiresAt,
+        );
+      } else if (
+        current.purpose === EMAIL_VERIFICATION_PURPOSE &&
+        'verificationUrl' in payload
+      ) {
+        message = renderVerificationEmail(
+          payload,
+          dependencies.queueConfig.frontendOrigin,
+          current.accountEmail,
+          current.tokenExpiresAt,
+        );
+      } else {
+        throw new Error('Delivery payload purpose does not match the job.');
+      }
     } catch {
       try {
         await markFailed(
@@ -339,8 +362,7 @@ export function createEmailDeliveryWorker(
         ...(updated ? {} : { classification: 'claim_lost' as const }),
       });
     } catch {
-      // SMTP may have accepted the email. Leave the lease for recovery; retry
-      // can produce a duplicate, which is why delivery is at least once.
+      // SMTP may have accepted the email. Lease recovery can cause a duplicate.
       report({
         jobId: current.id,
         status: 'warning',
@@ -366,6 +388,7 @@ export function createEmailDeliveryWorker(
     async run(signal) {
       while (!signal.aborted) {
         await this.runOnce();
+
         if (!signal.aborted) {
           await wait(dependencies.workerConfig.pollIntervalMs, signal);
         }

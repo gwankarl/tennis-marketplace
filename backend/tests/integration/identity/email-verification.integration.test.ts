@@ -149,7 +149,7 @@ async function issueAndReadToken(
       serialized: row.encrypted_payload,
     },
     row.id,
-    row.purpose,
+    EMAIL_VERIFICATION_PURPOSE,
     TEST_QUEUE_CONFIG,
   );
   const token = new URL(payload.verificationUrl).searchParams.get('token');

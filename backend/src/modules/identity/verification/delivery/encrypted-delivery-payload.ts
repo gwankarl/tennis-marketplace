@@ -8,7 +8,7 @@ const AUTH_TAG_BYTES = 16;
 const MAX_PAYLOAD_BYTES = 4096;
 const MAX_SERIALIZED_LENGTH = 6000;
 
-const deliveryPayloadSchema = z
+const verificationPayloadSchema = z
   .object({
     recipientEmail: z.string().email().max(320),
     verificationUrl: z.string().url().max(2048),
@@ -16,7 +16,25 @@ const deliveryPayloadSchema = z
   })
   .strict();
 
-export type VerificationDeliveryPayload = z.infer<typeof deliveryPayloadSchema>;
+const passwordResetPayloadSchema = z
+  .object({
+    recipientEmail: z.string().email().max(320),
+    passwordResetUrl: z.string().url().max(2048),
+    expiresAt: z.string().datetime(),
+  })
+  .strict();
+
+export type VerificationDeliveryPayload = z.infer<
+  typeof verificationPayloadSchema
+>;
+
+export type PasswordResetDeliveryPayload = z.infer<
+  typeof passwordResetPayloadSchema
+>;
+
+type EmailDeliveryPurpose = 'email_verification' | 'password_reset';
+type EmailDeliveryPayload =
+  VerificationDeliveryPayload | PasswordResetDeliveryPayload;
 
 export interface EncryptedDeliveryPayload {
   keyId: string;
@@ -59,19 +77,49 @@ function decodeBase64Url(value: string, expectedBytes?: number): Buffer {
   return decoded;
 }
 
+function parsePayload(
+  payload: unknown,
+  purpose: string,
+): EmailDeliveryPayload | null {
+  if (purpose === 'email_verification') {
+    const parsed = verificationPayloadSchema.safeParse(payload);
+    return parsed.success ? parsed.data : null;
+  }
+
+  if (purpose === 'password_reset') {
+    const parsed = passwordResetPayloadSchema.safeParse(payload);
+    return parsed.success ? parsed.data : null;
+  }
+
+  return null;
+}
+
 export function encryptDeliveryPayload(
   payload: VerificationDeliveryPayload,
   jobId: string,
-  purpose: string,
+  purpose: 'email_verification',
+  config: EmailQueueConfig,
+): EncryptedDeliveryPayload;
+export function encryptDeliveryPayload(
+  payload: PasswordResetDeliveryPayload,
+  jobId: string,
+  purpose: 'password_reset',
+  config: EmailQueueConfig,
+): EncryptedDeliveryPayload;
+export function encryptDeliveryPayload(
+  payload: EmailDeliveryPayload,
+  jobId: string,
+  purpose: EmailDeliveryPurpose,
   config: EmailQueueConfig,
 ): EncryptedDeliveryPayload {
-  const parsed = deliveryPayloadSchema.safeParse(payload);
+  const parsed = parsePayload(payload, purpose);
 
-  if (!parsed.success || config.activeKey.key.length !== 32) {
+  if (!parsed || config.activeKey.key.length !== 32) {
     throw new EncryptedDeliveryPayloadError();
   }
 
-  const plaintext = Buffer.from(JSON.stringify(parsed.data), 'utf8');
+  const plaintext = Buffer.from(JSON.stringify(parsed), 'utf8');
+
   if (plaintext.length > MAX_PAYLOAD_BYTES) {
     throw new EncryptedDeliveryPayloadError();
   }
@@ -98,16 +146,30 @@ export function encryptDeliveryPayload(
   };
 }
 
-/**
- * Decrypts and validates a payload. Parsing, authentication, and schema errors
- * become the same safe error; raw payload or crypto details are never retained.
- */
+export function decryptDeliveryPayload(
+  encrypted: EncryptedDeliveryPayload,
+  jobId: string,
+  purpose: 'email_verification',
+  config: EmailQueueConfig,
+): VerificationDeliveryPayload;
+export function decryptDeliveryPayload(
+  encrypted: EncryptedDeliveryPayload,
+  jobId: string,
+  purpose: 'password_reset',
+  config: EmailQueueConfig,
+): PasswordResetDeliveryPayload;
 export function decryptDeliveryPayload(
   encrypted: EncryptedDeliveryPayload,
   jobId: string,
   purpose: string,
   config: EmailQueueConfig,
-): VerificationDeliveryPayload {
+): EmailDeliveryPayload;
+export function decryptDeliveryPayload(
+  encrypted: EncryptedDeliveryPayload,
+  jobId: string,
+  purpose: string,
+  config: EmailQueueConfig,
+): EmailDeliveryPayload {
   try {
     if (
       encrypted.keyId !== config.activeKey.keyId ||
@@ -117,6 +179,7 @@ export function decryptDeliveryPayload(
     }
 
     const parts = encrypted.serialized.split('.');
+
     if (parts.length !== 4 || parts[0] !== FORMAT_VERSION) {
       throw new EncryptedDeliveryPayloadError();
     }
@@ -148,15 +211,16 @@ export function decryptDeliveryPayload(
       throw new EncryptedDeliveryPayloadError();
     }
 
-    const parsed = deliveryPayloadSchema.safeParse(
-      JSON.parse(plaintext.toString('utf8')),
+    const parsed = parsePayload(
+      JSON.parse(plaintext.toString('utf8')) as unknown,
+      purpose,
     );
 
-    if (!parsed.success) {
+    if (!parsed) {
       throw new EncryptedDeliveryPayloadError();
     }
 
-    return parsed.data;
+    return parsed;
   } catch {
     throw new EncryptedDeliveryPayloadError();
   }

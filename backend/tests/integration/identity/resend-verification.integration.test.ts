@@ -11,6 +11,7 @@ import { createEmailVerificationResendRepository } from '../../../src/modules/id
 import { createEmailVerificationRepository } from '../../../src/modules/identity/verification/email-verification.repository.js';
 import { createEmailVerificationService } from '../../../src/modules/identity/verification/email-verification.service.js';
 import { createResendVerificationService } from '../../../src/modules/identity/verification/resend-verification.service.js';
+import { EMAIL_VERIFICATION_PURPOSE } from '../../../src/modules/identity/verification/delivery/email-delivery-job.schema.js';
 import { decryptDeliveryPayload } from '../../../src/modules/identity/verification/delivery/encrypted-delivery-payload.js';
 
 const connectionString = parseTestDatabaseUrl(process.env);
@@ -129,7 +130,7 @@ async function readOldestToken(accountId: string): Promise<string> {
       serialized: row.encrypted_payload,
     },
     row.id,
-    row.purpose,
+    EMAIL_VERIFICATION_PURPOSE,
     TEST_QUEUE_CONFIG,
   );
   const token = new URL(payload.verificationUrl).searchParams.get('token');
