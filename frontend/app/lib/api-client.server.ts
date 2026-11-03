@@ -29,7 +29,7 @@ export type ApiResult<T> =
 export interface ApiRequestOptions {
   fetchImplementation?: typeof fetch;
   timeoutMs?: number;
-  method?: 'GET' | 'POST';
+  method?: 'GET' | 'POST' | 'PATCH';
   jsonBody?: unknown;
   /** Server-only credential forwarded to Fastify in Authorization. */
   sessionCredential?: string;
@@ -164,14 +164,12 @@ export async function requestApi<T>(
         method,
         headers: {
           accept: 'application/json',
-          ...(method === 'POST' ? { 'content-type': 'application/json' } : {}),
+          ...(method !== 'GET' ? { 'content-type': 'application/json' } : {}),
           ...(options.sessionCredential
             ? { authorization: `Bearer ${options.sessionCredential}` }
             : {}),
         },
-        ...(method === 'POST'
-          ? { body: JSON.stringify(options.jsonBody) }
-          : {}),
+        ...(method !== 'GET' ? { body: JSON.stringify(options.jsonBody) } : {}),
         signal: controller.signal,
       });
     } catch {

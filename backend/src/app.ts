@@ -12,6 +12,8 @@ import type { ResendVerificationRoutesOptions } from './modules/identity/verific
 import { resendVerificationRoutes } from './modules/identity/verification/resend-verification.routes.js';
 import type { AuthenticationRoutesOptions } from './modules/identity/sessions/auth.routes.js';
 import { authenticationRoutes } from './modules/identity/sessions/auth.routes.js';
+import type { UserProfileRoutesOptions } from './modules/identity/accounts/profile.routes.js';
+import { userProfileRoutes } from './modules/identity/accounts/profile.routes.js';
 
 interface BuildAppOptions {
   loggerStream?: LoggerStream;
@@ -19,6 +21,7 @@ interface BuildAppOptions {
   resendVerification?: ResendVerificationRoutesOptions;
   emailVerification?: EmailVerificationRoutesOptions;
   authentication?: AuthenticationRoutesOptions;
+  userProfile?: UserProfileRoutesOptions;
   closeResources?: () => Promise<void>;
 }
 
@@ -60,6 +63,10 @@ export function buildApp(options: BuildAppOptions = {}) {
 
   if (options.authentication) {
     app.register(authenticationRoutes, options.authentication);
+  }
+
+  if (options.userProfile) {
+    app.register(userProfileRoutes, options.userProfile);
   }
 
   if (options.closeResources) {

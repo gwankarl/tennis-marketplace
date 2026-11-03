@@ -18,6 +18,7 @@ import { createLoginAttemptCounterRepository } from './modules/identity/sessions
 import { createUserSessionRepository } from './modules/identity/sessions/user-session.repository.js';
 import { createLoginService } from './modules/identity/sessions/login.service.js';
 import { createSessionService } from './modules/identity/sessions/session.service.js';
+import { createUserProfileService } from './modules/identity/accounts/profile.service.js';
 
 const verificationService = createEmailVerificationService({
   repository: createEmailVerificationRepository(db),
@@ -33,14 +34,23 @@ const resendVerificationService = createResendVerificationService({
   maxJobsPerHour: env.RESEND_VERIFICATION_ACCOUNT_MAX_PER_HOUR,
 });
 
+const accountRepository = createAccountRepository(db);
+
 const registrationService = createRegistrationService({
-  accounts: createAccountRepository(db),
+  accounts: accountRepository,
   passwords: { screenPassword, hashPassword },
   verification: verificationService,
   termsVersion: env.TERMS_VERSION,
 });
 
 const userSessions = createUserSessionRepository(db);
+
+const sessionService = createSessionService({
+  repository: userSessions,
+});
+const userProfileService = createUserProfileService({
+  accounts: accountRepository,
+});
 
 let app: ReturnType<typeof buildApp> | undefined;
 let shuttingDown = false;
@@ -109,7 +119,11 @@ async function start(): Promise<void> {
       },
       authentication: {
         login: loginService,
-        sessions: createSessionService({ repository: userSessions }),
+        sessions: sessionService,
+      },
+      userProfile: {
+        service: userProfileService,
+        sessions: sessionService,
       },
       closeResources: closeDatabase,
     });

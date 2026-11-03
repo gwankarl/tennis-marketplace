@@ -1,0 +1,37 @@
+.user-profile {
+  box-sizing: border-box;
+  margin: 2rem auto;
+  max-width: 40rem;
+  padding: 0 1rem;
+}
+
+.user-profile__field {
+  display: grid;
+  gap: 0.35rem;
+  margin: 1rem 0;
+}
+
+.user-profile__field input {
+  box-sizing: border-box;
+  font: inherit;
+  max-width: 100%;
+  padding: 0.6rem;
+}
+
+.user-profile__field-error {
+  color: #a32020;
+  margin: 0;
+}
+
+.user-profile__errors {
+  border: 1px solid #a32020;
+  border-radius: 0.35rem;
+  margin: 1rem 0;
+  padding: 1rem;
+}
+
+.user-profile button {
+  font: inherit;
+  margin-top: 0.5rem;
+  padding: 0.65rem 1rem;
+}

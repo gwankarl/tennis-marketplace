@@ -50,6 +50,12 @@ export const users = pgTable(
     })
       .notNull()
       .defaultNow(),
+    updatedAt: timestamp('updated_at', {
+      withTimezone: true,
+      mode: 'date',
+    })
+      .notNull()
+      .defaultNow(),
   },
   (table) => [
     check(

@@ -7,4 +7,5 @@ export default [
   route('resend-verification', 'routes/resend-verification.tsx'),
   route('login', 'routes/login.tsx'),
   route('account', 'routes/account.tsx'),
+  route('profile', 'routes/profile.tsx'),
 ] satisfies RouteConfig;

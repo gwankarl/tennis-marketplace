@@ -29,6 +29,13 @@
       "when": 1793657353587,
       "tag": "0003_sessions_and_login_attempt_counters",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1793704417703,
+      "tag": "0004_users_updated_at",
+      "breakpoints": true
     }
   ]
 }

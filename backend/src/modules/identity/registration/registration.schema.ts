@@ -1,27 +1,5 @@
 import { z } from 'zod';
-
-const NAME_CHARACTERS = /^[\p{L}\p{M} '’\u2010-\u2015-]+$/u;
-
-const nameSchema = z
-  .string()
-  .trim()
-  .superRefine((value, context) => {
-    const codePointLength = Array.from(value).length;
-
-    if (codePointLength < 1 || codePointLength > 100) {
-      context.addIssue({
-        code: 'custom',
-        message: 'Enter a name between 1 and 100 characters.',
-      });
-    }
-
-    if (!NAME_CHARACTERS.test(value) || !/\p{L}/u.test(value)) {
-      context.addIssue({
-        code: 'custom',
-        message: 'Enter a valid name.',
-      });
-    }
-  });
+import { accountNameSchema as nameSchema } from '../accounts/account-name.schema.js';
 
 const passwordSchema = z.string().superRefine((value, context) => {
   const codePointLength = Array.from(value).length;

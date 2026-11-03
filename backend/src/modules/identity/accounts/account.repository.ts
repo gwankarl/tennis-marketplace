@@ -1,3 +1,4 @@
+import { eq } from 'drizzle-orm';
 import type { NodePgDatabase } from 'drizzle-orm/node-postgres';
 import { users } from './accounts.schema.js';
 import type { DatabaseTransactionExecutor } from '../../../db/client.js';
@@ -20,11 +21,29 @@ export type AfterAccountInsert = (
   transaction: DatabaseTransactionExecutor,
 ) => Promise<void>;
 
+export interface UserProfileRecord {
+  firstName: string;
+  lastName: string;
+  email: string;
+  emailVerified: boolean;
+  createdAt: Date;
+}
+
+export type ProfileNameChanges = Partial<
+  Pick<UserProfileRecord, 'firstName' | 'lastName'>
+>;
+
 export interface AccountRepository {
   createAccount(
     account: NewAccountRecord,
     afterInsert: AfterAccountInsert,
   ): Promise<CreateAccountResult>;
+  getProfileById(userId: string): Promise<UserProfileRecord | null>;
+  updateProfileById(
+    userId: string,
+    changes: ProfileNameChanges,
+    updatedAt: Date,
+  ): Promise<UserProfileRecord | null>;
 }
 
 interface PostgreSqlConstraintError extends Error {
@@ -57,9 +76,32 @@ function isNormalizedEmailUniqueViolation(error: unknown): boolean {
   return false;
 }
 
+const profileColumns = {
+  firstName: users.firstName,
+  lastName: users.lastName,
+  email: users.email,
+  emailVerifiedAt: users.emailVerifiedAt,
+  createdAt: users.createdAt,
+};
+
+type ProfileRow = Pick<
+  typeof users.$inferSelect,
+  'firstName' | 'lastName' | 'email' | 'emailVerifiedAt' | 'createdAt'
+>;
+
+function toUserProfile(row: ProfileRow): UserProfileRecord {
+  return {
+    firstName: row.firstName,
+    lastName: row.lastName,
+    email: row.email,
+    emailVerified: row.emailVerifiedAt !== null,
+    createdAt: row.createdAt,
+  };
+}
+
 /**
- * Inserts the account and runs queue creation on the same transaction.
- * Only the normalized-email unique violation becomes a duplicate result.
+ * Persists identity data and returns only approved profile fields.
+ * Callers must derive userId from the authenticated session.
  */
 export function createAccountRepository(
   database: NodePgDatabase,
@@ -88,6 +130,26 @@ export function createAccountRepository(
 
         throw error;
       }
+    },
+
+    async getProfileById(userId) {
+      const [row] = await database
+        .select(profileColumns)
+        .from(users)
+        .where(eq(users.id, userId))
+        .limit(1);
+
+      return row ? toUserProfile(row) : null;
+    },
+
+    async updateProfileById(userId, changes, updatedAt) {
+      const [row] = await database
+        .update(users)
+        .set({ ...changes, updatedAt })
+        .where(eq(users.id, userId))
+        .returning(profileColumns);
+
+      return row ? toUserProfile(row) : null;
     },
   };
 }
