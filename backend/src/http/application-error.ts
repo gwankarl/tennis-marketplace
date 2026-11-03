@@ -1,6 +1,8 @@
 export type ApplicationErrorCode =
   | 'UNAUTHENTICATED'
   | 'FORBIDDEN'
+  | 'EMAIL_VERIFICATION_REQUIRED'
+  | 'ACCOUNT_RESTRICTED'
   | 'NOT_FOUND'
   | 'CONFLICT'
   | 'RATE_LIMITED'

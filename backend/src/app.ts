@@ -10,12 +10,15 @@ import type { EmailVerificationRoutesOptions } from './identity/email-verificati
 import { emailVerificationRoutes } from './identity/email-verification.routes.js';
 import type { ResendVerificationRoutesOptions } from './identity/resend-verification.routes.js';
 import { resendVerificationRoutes } from './identity/resend-verification.routes.js';
+import type { AuthenticationRoutesOptions } from './identity/auth.routes.js';
+import { authenticationRoutes } from './identity/auth.routes.js';
 
 interface BuildAppOptions {
   loggerStream?: LoggerStream;
   registration?: RegistrationRoutesOptions;
   resendVerification?: ResendVerificationRoutesOptions;
   emailVerification?: EmailVerificationRoutesOptions;
+  authentication?: AuthenticationRoutesOptions;
   closeResources?: () => Promise<void>;
 }
 
@@ -53,6 +56,10 @@ export function buildApp(options: BuildAppOptions = {}) {
 
   if (options.resendVerification) {
     app.register(resendVerificationRoutes, options.resendVerification);
+  }
+
+  if (options.authentication) {
+    app.register(authenticationRoutes, options.authentication);
   }
 
   if (options.closeResources) {

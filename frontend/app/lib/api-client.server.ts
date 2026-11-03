@@ -31,6 +31,8 @@ export interface ApiRequestOptions {
   timeoutMs?: number;
   method?: 'GET' | 'POST';
   jsonBody?: unknown;
+  /** Server-only credential forwarded to Fastify in Authorization. */
+  sessionCredential?: string;
 }
 
 const DEFAULT_TIMEOUT_MS = 5_000;
@@ -163,6 +165,9 @@ export async function requestApi<T>(
         headers: {
           accept: 'application/json',
           ...(method === 'POST' ? { 'content-type': 'application/json' } : {}),
+          ...(options.sessionCredential
+            ? { authorization: `Bearer ${options.sessionCredential}` }
+            : {}),
         },
         ...(method === 'POST'
           ? { body: JSON.stringify(options.jsonBody) }

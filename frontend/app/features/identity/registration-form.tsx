@@ -49,6 +49,9 @@ export function RegistrationForm({
           Need another verification email?{' '}
           <Link to='/resend-verification'>Request one</Link>
         </p>
+        <p>
+          Already verified? <Link to='/login'>Sign in</Link>
+        </p>
       </main>
     );
   }

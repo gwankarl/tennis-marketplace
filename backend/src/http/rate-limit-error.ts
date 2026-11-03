@@ -15,3 +15,11 @@ export class ResendVerificationRateLimitError extends Error {
     this.name = 'ResendVerificationRateLimitError';
   }
 }
+
+/** Trusted marker emitted only by the login service's configured limiter. */
+export class LoginRateLimitError extends Error {
+  constructor(readonly retryAfterSeconds: number) {
+    super('Login attempt limit exceeded.');
+    this.name = 'LoginRateLimitError';
+  }
+}

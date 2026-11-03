@@ -27,6 +27,9 @@ export function EmailVerificationPage({
         <section role='status' aria-live='polite'>
           <h1>Email verified</h1>
           <p>Your email address is verified.</p>
+          <p>
+            <Link to='/login'>Sign in</Link>
+          </p>
         </section>
       )}
 

@@ -10,6 +10,15 @@ export function registerOpenApi(app: FastifyInstance): void {
         title: 'Tennis Xpress API',
         version: '0.1.0',
       },
+      components: {
+        securitySchemes: {
+          bearerAuth: {
+            type: 'http',
+            scheme: 'bearer',
+            bearerFormat: 'opaque session credential',
+          },
+        },
+      },
     },
     transform: jsonSchemaTransform,
   });

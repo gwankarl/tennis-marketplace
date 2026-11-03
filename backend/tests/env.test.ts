@@ -9,12 +9,17 @@ describe('parseBackendEnv', () => {
           'postgresql://dev:example@127.0.0.1:5432/tennis_xpress_dev',
         HOST: '127.0.0.1',
         PORT: '3100',
+        LOGIN_RATE_LIMIT_HMAC_KEY: 'A'.repeat(43),
         TERMS_VERSION: 'terms-v1',
       }),
     ).toEqual({
       DATABASE_URL: 'postgresql://dev:example@127.0.0.1:5432/tennis_xpress_dev',
       HOST: '127.0.0.1',
       PORT: 3100,
+      LOGIN_RATE_LIMIT_HMAC_KEY: 'A'.repeat(43),
+      LOGIN_RATE_LIMIT_IP_MAX: 20,
+      LOGIN_RATE_LIMIT_EMAIL_MAX: 10,
+      LOGIN_RATE_LIMIT_WINDOW_MS: 900_000,
       REGISTRATION_RATE_LIMIT_MAX: 5,
       REGISTRATION_RATE_LIMIT_WINDOW_MS: 900_000,
       RESEND_VERIFICATION_IP_RATE_LIMIT_MAX: 5,
@@ -68,5 +73,24 @@ describe('parseBackendEnv', () => {
     }
 
     expect(errorMessage).toContain('PORT');
+  });
+
+  it('rejects an invalid login HMAC key without exposing its value', () => {
+    const secretMarker = 'not-a-valid-login-hmac-key';
+    let errorMessage = '';
+
+    try {
+      parseBackendEnv({
+        DATABASE_URL:
+          'postgresql://dev:example@127.0.0.1:5432/tennis_xpress_dev',
+        TERMS_VERSION: 'terms-v1',
+        LOGIN_RATE_LIMIT_HMAC_KEY: secretMarker,
+      });
+    } catch (error) {
+      errorMessage = error instanceof Error ? error.message : String(error);
+    }
+
+    expect(errorMessage).toContain('LOGIN_RATE_LIMIT_HMAC_KEY');
+    expect(errorMessage).not.toContain(secretMarker);
   });
 });

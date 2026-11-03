@@ -15,9 +15,12 @@ import { hasZodFastifySchemaValidationErrors } from '@fastify/type-provider-zod'
 import {
   RegistrationRateLimitError,
   ResendVerificationRateLimitError,
+  LoginRateLimitError,
 } from './rate-limit-error.js';
 
 const APPLICATION_ERROR_STATUS: Record<ApplicationErrorCode, number> = {
+  EMAIL_VERIFICATION_REQUIRED: 403,
+  ACCOUNT_RESTRICTED: 403,
   UNAUTHENTICATED: 401,
   FORBIDDEN: 403,
   NOT_FOUND: 404,
@@ -192,6 +195,18 @@ export function registerErrorHandlers(app: FastifyInstance): void {
         'VALIDATION_ERROR',
         'The request contains invalid fields.',
         validationDetails(error.validation),
+      );
+    }
+
+    if (error instanceof LoginRateLimitError) {
+      reply.header('retry-after', String(error.retryAfterSeconds));
+
+      return sendError(
+        reply,
+        request.id,
+        429,
+        'RATE_LIMITED',
+        'Too many login attempts. Try again later.',
       );
     }
 

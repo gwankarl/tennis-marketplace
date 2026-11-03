@@ -1,5 +1,15 @@
 import { z } from 'zod';
 
+function isValidLoginRateLimitHmacKey(value: string): boolean {
+  if (!/^[A-Za-z0-9_-]{43}$/.test(value)) {
+    return false;
+  }
+
+  const decoded = Buffer.from(value, 'base64url');
+
+  return decoded.byteLength === 32 && decoded.toString('base64url') === value;
+}
+
 const backendEnvSchema = z.object({
   DATABASE_URL: z
     .string()
@@ -12,6 +22,19 @@ const backendEnvSchema = z.object({
   PORT: z.preprocess(
     (value) => (value === undefined ? 3000 : Number(value)),
     z.number().int().min(1).max(65535),
+  ),
+  LOGIN_RATE_LIMIT_HMAC_KEY: z.string().refine(isValidLoginRateLimitHmacKey),
+  LOGIN_RATE_LIMIT_IP_MAX: z.preprocess(
+    (value) => (value === undefined ? 20 : Number(value)),
+    z.number().int().min(1).max(1000),
+  ),
+  LOGIN_RATE_LIMIT_EMAIL_MAX: z.preprocess(
+    (value) => (value === undefined ? 10 : Number(value)),
+    z.number().int().min(1).max(1000),
+  ),
+  LOGIN_RATE_LIMIT_WINDOW_MS: z.preprocess(
+    (value) => (value === undefined ? 900_000 : Number(value)),
+    z.number().int().min(1).max(86_400_000),
   ),
   REGISTRATION_RATE_LIMIT_MAX: z.preprocess(
     (value) => (value === undefined ? 5 : Number(value)),
