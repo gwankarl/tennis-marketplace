@@ -6,15 +6,15 @@ import {
   useNavigation,
 } from 'react-router';
 import type { LinksFunction } from 'react-router';
-import { EmailVerificationPage } from '../features/identity/email-verification-page';
+import { EmailVerificationPage } from '../features/identity/components/email-verification-page';
 import {
   loadEmailVerificationPage,
   submitEmailVerification,
   type VerificationActionData,
   type VerificationLoaderData,
-} from '../features/identity/email-verification-flow.server';
-import stylesheet from '../features/identity/email-verification-page.css?url';
-import { createCsrfToken } from '../lib/csrf.server';
+} from '../features/identity/server/email-verification-flow.server';
+import stylesheet from '../features/identity/components/email-verification-page.css?url';
+import { createCsrfToken } from '../lib/security/csrf.server';
 
 export const links: LinksFunction = () => [
   { rel: 'stylesheet', href: stylesheet },

@@ -3,11 +3,11 @@ import { env } from './src/config/runtime-env.js';
 
 export default defineConfig({
   schema: [
-    './src/db/accounts.schema.ts',
-    './src/identity/user-session.schema.ts',
-    './src/identity/login-attempt-counter.schema.ts',
-    './src/identity/email-verification.schema.ts',
-    './src/identity/email-delivery-job.schema.ts',
+    './src/modules/identity/accounts/accounts.schema.ts',
+    './src/modules/identity/sessions/user-session.schema.ts',
+    './src/modules/identity/sessions/login-attempt-counter.schema.ts',
+    './src/modules/identity/verification/email-verification.schema.ts',
+    './src/modules/identity/verification/delivery/email-delivery-job.schema.ts',
   ],
   out: './drizzle',
   dialect: 'postgresql',

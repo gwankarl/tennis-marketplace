@@ -1,9 +1,9 @@
 import { useActionData, useLoaderData, type LinksFunction } from 'react-router';
-import { ResendVerificationForm } from '../features/identity/resend-verification-form';
-import { runResendVerificationAction } from '../features/identity/resend-verification-action.server';
+import { ResendVerificationForm } from '../features/identity/components/resend-verification-form';
+import { runResendVerificationAction } from '../features/identity/server/resend-verification-action.server';
 import type { ResendVerificationActionData } from '../features/identity/resend-verification.types';
-import { createCsrfToken } from '../lib/csrf.server';
-import stylesheet from '../features/identity/resend-verification-form.css?url';
+import { createCsrfToken } from '../lib/security/csrf.server';
+import stylesheet from '../features/identity/components/resend-verification-form.css?url';
 
 export const links: LinksFunction = () => [
   { rel: 'stylesheet', href: stylesheet },

@@ -2,17 +2,17 @@ import { data, redirect, useActionData, useLoaderData } from 'react-router';
 import {
   BuyerOverview,
   BuyerOverviewUnavailable,
-} from '../features/identity/buyer-overview';
+} from '../features/identity/components/buyer-overview';
 import {
   runLogoutAction,
   type LogoutActionData,
-} from '../features/identity/logout-action.server';
-import { loadCurrentSession } from '../lib/auth-session.server';
-import { createSessionCsrfToken } from '../lib/csrf.server';
+} from '../features/identity/server/logout-action.server';
+import { loadCurrentSession } from '../lib/security/auth-session.server';
+import { createSessionCsrfToken } from '../lib/security/csrf.server';
 import {
   clearSessionCookie,
   readSessionCredential,
-} from '../lib/session-cookie.server';
+} from '../lib/security/session-cookie.server';
 
 function privateHeaders(): Headers {
   return new Headers({

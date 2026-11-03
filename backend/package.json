@@ -13,7 +13,7 @@
     "test:watch": "vitest",
     "test:integration": "vitest run --config vitest.integration.config.ts",
     "email:check": "tsx src/infrastructure/email/check-smtp.ts",
-    "email:worker": "tsx src/infrastructure/email/email-worker.ts",
+    "email:worker": "tsx src/workers/email-worker.ts",
     "db:check": "tsx src/db/check-connection.ts",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate"

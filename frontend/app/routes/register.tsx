@@ -1,9 +1,9 @@
 import { useActionData, useLoaderData, type LinksFunction } from 'react-router';
-import { RegistrationForm } from '../features/identity/registration-form';
-import { runRegistrationAction } from '../features/identity/registration-action.server';
+import { RegistrationForm } from '../features/identity/components/registration-form';
+import { runRegistrationAction } from '../features/identity/server/registration-action.server';
 import type { RegistrationActionData } from '../features/identity/registration.types';
-import { createCsrfToken } from '../lib/csrf.server';
-import stylesheet from '../features/identity/registration-form.css?url';
+import { createCsrfToken } from '../lib/security/csrf.server';
+import stylesheet from '../features/identity/components/registration-form.css?url';
 
 export const links: LinksFunction = () => [
   { rel: 'stylesheet', href: stylesheet },

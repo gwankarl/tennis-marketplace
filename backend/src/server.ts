@@ -2,22 +2,22 @@
 import { env } from './config/runtime-env.js';
 import { buildApp } from './app.js';
 import { closeDatabase, db } from './db/client.js';
-import { createAccountRepository } from './identity/account.repository.js';
-import { createRegistrationService } from './identity/registration.service.js';
+import { createAccountRepository } from './modules/identity/accounts/account.repository.js';
+import { createRegistrationService } from './modules/identity/registration/registration.service.js';
 import {
   hashPassword,
   screenPassword,
   verifyPassword,
-} from './identity/password.service.js';
+} from './modules/identity/passwords/password.service.js';
 import { parseEmailQueueConfig } from './config/email-queue-env.js';
-import { createEmailVerificationRepository } from './identity/email-verification.repository.js';
-import { createEmailVerificationService } from './identity/email-verification.service.js';
-import { createEmailVerificationResendRepository } from './identity/email-verification-resend.repository.js';
-import { createResendVerificationService } from './identity/resend-verification.service.js';
-import { createLoginAttemptCounterRepository } from './identity/login-attempt-counter.repository.js';
-import { createUserSessionRepository } from './identity/user-session.repository.js';
-import { createLoginService } from './identity/login.service.js';
-import { createSessionService } from './identity/session.service.js';
+import { createEmailVerificationRepository } from './modules/identity/verification/email-verification.repository.js';
+import { createEmailVerificationService } from './modules/identity/verification/email-verification.service.js';
+import { createEmailVerificationResendRepository } from './modules/identity/verification/email-verification-resend.repository.js';
+import { createResendVerificationService } from './modules/identity/verification/resend-verification.service.js';
+import { createLoginAttemptCounterRepository } from './modules/identity/sessions/login-attempt-counter.repository.js';
+import { createUserSessionRepository } from './modules/identity/sessions/user-session.repository.js';
+import { createLoginService } from './modules/identity/sessions/login.service.js';
+import { createSessionService } from './modules/identity/sessions/session.service.js';
 
 const verificationService = createEmailVerificationService({
   repository: createEmailVerificationRepository(db),

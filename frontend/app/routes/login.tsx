@@ -1,14 +1,14 @@
 import { data, redirect, useActionData, useLoaderData } from 'react-router';
 import type { LinksFunction } from 'react-router';
-import { LoginForm } from '../features/identity/login-form';
+import { LoginForm } from '../features/identity/components/login-form';
 import {
   runLoginAction,
   type LoginActionResult,
-} from '../features/identity/login-action.server';
+} from '../features/identity/server/login-action.server';
 import type { LoginActionData } from '../features/identity/login.types';
-import { createCsrfToken } from '../lib/csrf.server';
-import { returnToFromRequestUrl } from '../lib/return-to.server';
-import stylesheet from '../features/identity/login-form.css?url';
+import { createCsrfToken } from '../lib/security/csrf.server';
+import { returnToFromRequestUrl } from '../lib/security/return-to.server';
+import stylesheet from '../features/identity/components/login-form.css?url';
 
 export const links: LinksFunction = () => [
   { rel: 'stylesheet', href: stylesheet },

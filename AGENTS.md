@@ -57,3 +57,56 @@
 - For substantial or scattered changes, provide the complete replacement file, preserving unrelated behavior.
 - For new files, provide safe directory/file creation commands and complete contents.
 - Never invent line numbers. If the file cannot be inspected, say so and use an exact code anchor instead.
+
+## File and directory placement
+
+Before creating a file or directory, inspect the current structure and follow
+the organization established by the completed backend/frontend rearrangement.
+Do not recreate old paths or reorganize unrelated files.
+
+### Backend
+- Keep app.ts focused on composition and server.ts on API startup/shutdown.
+- config/: environment and logging configuration.
+- db/: shared database connection and database commands.
+- http/: HTTP error translation and OpenAPI infrastructure.
+- infrastructure/: reusable external-service adapters, such as SMTP transport.
+- modules/<domain>/: domain-owned schemas, routes, services and repositories.
+- Within identity, use the established registration, passwords, verification
+  and sessions folders where appropriate.
+- Keep verification-specific templates, queue logic and delivery behavior
+  within the verification module.
+- workers/: executable worker entry points; domain behavior stays in modules.
+- drizzle/: generated SQL migrations and metadata. Preserve migration history.
+
+### Frontend
+- Preserve React Router framework files and route-module conventions.
+- routes/: route registration targets, loaders/actions, headers and boundaries.
+- features/<feature>/components/: feature-specific UI.
+- features/<feature>/schemas/: form validation.
+- features/<feature>/server/: feature-specific server orchestration/API calls.
+- components/: UI genuinely reused across features.
+- config/: environment configuration.
+- lib/: reusable infrastructure, including the server-only API client.
+- lib/security/: shared cookie, CSRF, origin and return-path handling.
+- styles/: global styles; feature-specific CSS may stay with its feature.
+- Keep server-only modules marked .server.ts and out of browser imports.
+
+### Tests
+- Follow each workspace's established unit/, integration/ and support/ layout.
+- Classify tests by dependencies and boundaries, not filenames alone.
+- Keep database-dependent integration tests separately discoverable from
+  database-independent tests.
+- Put fixtures/fakes in shared support only when reused.
+- Ensure test files are discovered exactly once.
+
+### Placement rules
+- Create folders only when actual files need them; no empty future scaffolding.
+- Keep small private helpers in their owning file.
+- Avoid generic utils/, helpers/ or common/ dumping grounds.
+- Extract shared code only when there is demonstrated reuse.
+- Do not split files or add architectural layers merely for symmetry.
+- Follow existing naming conventions and preserve framework-required names.
+- Before a new domain or cross-cutting abstraction, propose its location and
+  responsibility for agreement.
+- If these rules conflict with the actual structure, flag the conflict before
+  creating an alternative hierarchy.

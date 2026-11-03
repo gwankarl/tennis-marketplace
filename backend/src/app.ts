@@ -4,14 +4,14 @@ import { createLoggerOptions, type LoggerStream } from './config/logger.js';
 import { registerErrorHandlers } from './http/error-handler.js';
 import { configureSchemaCompilers } from './http/schema-compilers.js';
 import { registerOpenApi } from './http/openapi.js';
-import type { RegistrationRoutesOptions } from './identity/registration.routes.js';
-import { registrationRoutes } from './identity/registration.routes.js';
-import type { EmailVerificationRoutesOptions } from './identity/email-verification.routes.js';
-import { emailVerificationRoutes } from './identity/email-verification.routes.js';
-import type { ResendVerificationRoutesOptions } from './identity/resend-verification.routes.js';
-import { resendVerificationRoutes } from './identity/resend-verification.routes.js';
-import type { AuthenticationRoutesOptions } from './identity/auth.routes.js';
-import { authenticationRoutes } from './identity/auth.routes.js';
+import type { RegistrationRoutesOptions } from './modules/identity/registration/registration.routes.js';
+import { registrationRoutes } from './modules/identity/registration/registration.routes.js';
+import type { EmailVerificationRoutesOptions } from './modules/identity/verification/email-verification.routes.js';
+import { emailVerificationRoutes } from './modules/identity/verification/email-verification.routes.js';
+import type { ResendVerificationRoutesOptions } from './modules/identity/verification/resend-verification.routes.js';
+import { resendVerificationRoutes } from './modules/identity/verification/resend-verification.routes.js';
+import type { AuthenticationRoutesOptions } from './modules/identity/sessions/auth.routes.js';
+import { authenticationRoutes } from './modules/identity/sessions/auth.routes.js';
 
 interface BuildAppOptions {
   loggerStream?: LoggerStream;
