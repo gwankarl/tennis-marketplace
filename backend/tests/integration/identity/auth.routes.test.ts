@@ -1,7 +1,9 @@
 import { describe, expect, it, vi } from 'vitest';
+import type {
+  WorkspaceAccessRepository,
+  WorkspaceKey,
+} from '../../../src/modules/identity/accounts/workspace-access.repository.js';
 import { buildApp } from '../../../src/app.js';
-import { ApplicationError } from '../../../src/http/application-error.js';
-import { LoginRateLimitError } from '../../../src/http/rate-limit-error.js';
 import type { LoginService } from '../../../src/modules/identity/sessions/login.service.js';
 import type { SessionService } from '../../../src/modules/identity/sessions/session.service.js';
 
@@ -27,6 +29,7 @@ function makeApp(
       isAdministrator: false,
     },
   },
+  permittedWorkspaces: WorkspaceKey[] | null = ['buyer'],
 ) {
   const login = {
     login: vi.fn(async () => loginResult),
@@ -35,11 +38,17 @@ function makeApp(
     current: vi.fn(async () => identity),
     logout: vi.fn(async () => true),
   } as unknown as SessionService;
+  const workspaces = {
+    forActiveUser: vi.fn(async () => permittedWorkspaces),
+  } as unknown as WorkspaceAccessRepository;
 
   return {
-    app: buildApp({ authentication: { login, sessions } }),
+    app: buildApp({
+      authentication: { login, sessions, workspaces },
+    }),
     login,
     sessions,
+    workspaces,
   };
 }
 
@@ -179,7 +188,7 @@ describe('authentication routes', () => {
   });
 
   it('authenticates current identity from Authorization and ignores forwarded IP headers', async () => {
-    const { app, sessions } = makeApp();
+    const { app, sessions, workspaces } = makeApp();
 
     try {
       const response = await app.inject({
@@ -193,8 +202,46 @@ describe('authentication routes', () => {
 
       expect(response.statusCode).toBe(200);
       expect(response.json().data.user.id).toBe(identity.userId);
+      expect(response.json().data.user.workspaces).toEqual(['buyer']);
       expect(sessions.current).toHaveBeenCalledWith(credential);
+      expect(workspaces.forActiveUser).toHaveBeenCalledWith(identity.userId);
       expect(response.body).not.toContain(credential);
+    } finally {
+      await app.close();
+    }
+  });
+
+  it('returns only the workspaces granted by the repository', async () => {
+    const { app } = makeApp(undefined, ['buyer', 'seller']);
+
+    try {
+      const response = await app.inject({
+        method: 'GET',
+        url: '/api/v1/auth/session',
+        headers: { authorization: `Bearer ${credential}` },
+      });
+
+      expect(response.statusCode).toBe(200);
+      expect(response.headers['cache-control']).toBe('no-store');
+      expect(response.json().data.user.workspaces).toEqual(['buyer', 'seller']);
+      expect(response.body).not.toContain(credential);
+    } finally {
+      await app.close();
+    }
+  });
+
+  it('rejects a current identity when the account is no longer eligible', async () => {
+    const { app } = makeApp(undefined, null);
+
+    try {
+      const response = await app.inject({
+        method: 'GET',
+        url: '/api/v1/auth/session',
+        headers: { authorization: `Bearer ${credential}` },
+      });
+
+      expect(response.statusCode).toBe(401);
+      expect(response.json().error.code).toBe('UNAUTHENTICATED');
     } finally {
       await app.close();
     }

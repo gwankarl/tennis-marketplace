@@ -1,0 +1,58 @@
+.workspace-shell {
+  min-height: 100vh;
+  color: #17212b;
+  background: #f5f8fa;
+}
+
+.workspace-shell__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1rem clamp(1rem, 4vw, 3rem);
+  border-bottom: 1px solid #d4dde4;
+  background: #fff;
+}
+
+.workspace-shell__brand {
+  color: inherit;
+  font-size: 1.15rem;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.workspace-shell__navigation,
+.workspace-shell__navigation ul {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.workspace-shell__navigation ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.workspace-shell__navigation a {
+  color: #174d70;
+  text-underline-offset: 0.2em;
+}
+
+.workspace-shell__content {
+  width: min(100% - 2rem, 64rem);
+  margin-inline: auto;
+  padding-block: clamp(1.5rem, 5vw, 3rem);
+}
+
+@media (max-width: 42rem) {
+  .workspace-shell__header,
+  .workspace-shell__navigation {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .workspace-shell__navigation ul {
+    flex-wrap: wrap;
+  }
+}

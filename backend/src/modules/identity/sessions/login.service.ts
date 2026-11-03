@@ -212,6 +212,13 @@ export async function createLoginService(
             return { kind: 'account_restricted' };
           }
 
+          // Password-only administrator login stays disabled in production until MFA exists.
+          if (
+            currentAccount.isAdministrator &&
+            process.env.NODE_ENV === 'production'
+          ) {
+            return { kind: 'account_restricted' };
+          }
           const createdAt = new Date(now().getTime());
           const absoluteLifetimeMs = currentAccount.isAdministrator
             ? ADMINISTRATOR_SESSION_ABSOLUTE_LIFETIME_MS

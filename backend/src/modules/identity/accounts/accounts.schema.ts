@@ -18,7 +18,10 @@ export const accountStatus = pgEnum('account_status', [
 ]);
 
 // Buying eligibility is account state; this permission is separate from identity.
-export const userPermission = pgEnum('user_permission', ['administrator']);
+export const userPermission = pgEnum('user_permission', [
+  'administrator',
+  'seller',
+]);
 
 export const users = pgTable(
   'users',

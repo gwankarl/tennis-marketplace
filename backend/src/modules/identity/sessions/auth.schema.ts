@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { workspaceKeys } from '../accounts/workspace-access.repository.js';
 import { normalizedEmailSchema } from '../registration/registration.schema.js';
 
 /**
@@ -51,6 +52,7 @@ export const currentSessionResponseSchema = z
             firstName: z.string(),
             lastName: z.string(),
             isAdministrator: z.boolean(),
+            workspaces: z.array(z.enum(workspaceKeys)),
           })
           .strict(),
       })

@@ -5,6 +5,7 @@ import { migrate } from 'drizzle-orm/node-postgres/migrator';
 import { Pool } from 'pg';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { parseTestDatabaseUrl } from '../../../src/config/test-database.js';
+import { createWorkspaceAccessRepository } from '../../../src/modules/identity/accounts/workspace-access.repository.js';
 import { createLoginAttemptCounterRepository } from '../../../src/modules/identity/sessions/login-attempt-counter.repository.js';
 import { createLoginService } from '../../../src/modules/identity/sessions/login.service.js';
 import { createSessionService } from '../../../src/modules/identity/sessions/session.service.js';
@@ -50,7 +51,7 @@ function privateKey(scope: 'ip' | 'email', value: string): string {
 
 async function createAccount(options: {
   email: string;
-  status?: 'active' | 'suspended';
+  status?: 'active' | 'suspended' | 'pending_email_verification';
   verified?: boolean;
 }): Promise<string> {
   const result = await getPool().query<{ id: string }>(
@@ -71,6 +72,17 @@ async function createAccount(options: {
   );
 
   return result.rows[0]!.id;
+}
+
+async function grantPermission(
+  userId: string,
+  permission: 'seller' | 'administrator',
+): Promise<void> {
+  await getPool().query(
+    `INSERT INTO user_permissions (user_id, permission)
+     VALUES ($1, $2)`,
+    [userId, permission],
+  );
 }
 
 async function makeServices(
@@ -330,6 +342,101 @@ describe('PostgreSQL login and session lifecycle', () => {
         sessionService.current(result.credential),
       ).resolves.toBeNull();
     } finally {
+      await cleanFixture(email, ip);
+    }
+  });
+
+  it('derives buyer and seller workspaces from current account state and permissions', async () => {
+    const email = `workspace-${randomUUID()}@example.test`;
+    const suspendedEmail = `workspace-suspended-${randomUUID()}@example.test`;
+    const unverifiedEmail = `workspace-unverified-${randomUUID()}@example.test`;
+    const workspaces = createWorkspaceAccessRepository(getDatabase());
+
+    try {
+      const userId = await createAccount({ email });
+
+      await expect(workspaces.forActiveUser(userId)).resolves.toEqual(['buyer']);
+
+      await grantPermission(userId, 'seller');
+
+      await expect(workspaces.forActiveUser(userId)).resolves.toEqual([
+        'buyer',
+        'seller',
+      ]);
+
+      const suspendedId = await createAccount({
+        email: suspendedEmail,
+        status: 'suspended',
+      });
+      const unverifiedId = await createAccount({
+        email: unverifiedEmail,
+        status: 'pending_email_verification',
+        verified: false,
+      });
+
+      await expect(workspaces.forActiveUser(suspendedId)).resolves.toBeNull();
+      await expect(workspaces.forActiveUser(unverifiedId)).resolves.toBeNull();
+    } finally {
+      await cleanFixture(email, '192.0.2.60');
+      await cleanFixture(suspendedEmail, '192.0.2.61');
+      await cleanFixture(unverifiedEmail, '192.0.2.62');
+    }
+  });
+
+  it('blocks production administrator login and rejects existing sessions', async () => {
+    const email = `admin-production-${randomUUID()}@example.test`;
+    const ip = makeTestIp();
+    const previousNodeEnv = process.env.NODE_ENV;
+
+    try {
+      process.env.NODE_ENV = 'test';
+
+      const userId = await createAccount({ email });
+      await grantPermission(userId, 'administrator');
+
+      const services = await makeServices();
+      const sessionService = createSessionService({
+        repository: services.sessions,
+        now: () => new Date(ATTEMPT_TIME.getTime() + 1_000),
+      });
+
+      const localLogin = await services.login.login(
+        { email, password: 'correct password' },
+        ip,
+      );
+
+      expect(localLogin.kind).toBe('authenticated');
+      if (localLogin.kind !== 'authenticated') return;
+
+      process.env.NODE_ENV = 'production';
+
+      await expect(
+        sessionService.current(localLogin.credential),
+      ).resolves.toBeNull();
+
+      await expect(
+        services.login.login(
+          { email, password: 'correct password' },
+          ip,
+        ),
+      ).resolves.toEqual({ kind: 'account_restricted' });
+
+      const sessionCount = await getPool().query<{ count: string }>(
+        `SELECT count(*)::text AS count
+           FROM user_sessions
+          WHERE user_id = $1`,
+        [userId],
+      );
+
+      // The existing local session remains stored but cannot be used in production.
+      expect(sessionCount.rows[0]?.count).toBe('1');
+    } finally {
+      if (previousNodeEnv === undefined) {
+        delete process.env.NODE_ENV;
+      } else {
+        process.env.NODE_ENV = previousNodeEnv;
+      }
+
       await cleanFixture(email, ip);
     }
   });

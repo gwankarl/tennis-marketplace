@@ -36,6 +36,13 @@
       "when": 1793704417703,
       "tag": "0004_users_updated_at",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1793711339321,
+      "tag": "0005_add_seller_permission",
+      "breakpoints": true
     }
   ]
 }

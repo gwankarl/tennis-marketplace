@@ -2,12 +2,15 @@ import { serverEnv } from '../../config/server-env.server';
 import { requestApi, type RuntimeSchema } from '../api-client.server';
 import { readSessionCredential } from './session-cookie.server';
 
+export type WorkspaceKey = 'buyer' | 'seller' | 'administrator';
+
 export interface SessionUser {
   id: string;
   email: string;
   firstName: string;
   lastName: string;
   isAdministrator: boolean;
+  workspaces: WorkspaceKey[];
 }
 
 interface SessionResponse {
@@ -40,7 +43,7 @@ const sessionResponseSchema: RuntimeSchema<SessionResponse> = {
     if (
       Object.keys(value).length !== 1 ||
       Object.keys(value.data).length !== 1 ||
-      Object.keys(user).length !== 5 ||
+      Object.keys(user).length !== 6 ||
       !('id' in user) ||
       typeof user.id !== 'string' ||
       !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
@@ -53,7 +56,15 @@ const sessionResponseSchema: RuntimeSchema<SessionResponse> = {
       !('lastName' in user) ||
       typeof user.lastName !== 'string' ||
       !('isAdministrator' in user) ||
-      typeof user.isAdministrator !== 'boolean'
+      typeof user.isAdministrator !== 'boolean' ||
+      !('workspaces' in user) ||
+      !Array.isArray(user.workspaces) ||
+      !user.workspaces.every(
+        (workspace: unknown) =>
+          workspace === 'buyer' ||
+          workspace === 'seller' ||
+          workspace === 'administrator',
+      )
     ) {
       throw new Error('Invalid session response.');
     }
@@ -66,6 +77,7 @@ const sessionResponseSchema: RuntimeSchema<SessionResponse> = {
           firstName: user.firstName,
           lastName: user.lastName,
           isAdministrator: user.isAdministrator,
+          workspaces: user.workspaces as WorkspaceKey[],
         },
       },
     };

@@ -224,6 +224,36 @@ describe('login service', () => {
     );
   });
 
+  it('blocks administrator login in production after password verification', async () => {
+    const previousNodeEnv = process.env.NODE_ENV;
+    process.env.NODE_ENV = 'production';
+
+    try {
+      const administrator = { ...ACCOUNT, isAdministrator: true };
+      const fixture = createLoginFixture(administrator);
+      const service = await fixture.servicePromise;
+
+      await expect(
+        service.login(
+          {
+            email: ACCOUNT.email,
+            password: '  existing password exactly  ',
+          },
+          '127.0.0.1',
+        ),
+      ).resolves.toEqual({ kind: 'account_restricted' });
+
+      expect(fixture.verifyPassword).toHaveBeenCalledOnce();
+      expect(fixture.createSession).not.toHaveBeenCalled();
+    } finally {
+      if (previousNodeEnv === undefined) {
+        delete process.env.NODE_ENV;
+      } else {
+        process.env.NODE_ENV = previousNodeEnv;
+      }
+    }
+  });
+
   it('does not create a session if account state changes before the locked check', async () => {
     const fixture = createLoginFixture(ACCOUNT, {
       lockedAccount: { ...ACCOUNT, status: 'suspended' },

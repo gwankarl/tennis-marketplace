@@ -115,6 +115,7 @@ describe('server-side session restoration', () => {
               firstName: 'Test',
               lastName: 'Player',
               isAdministrator: false,
+              workspaces: ['buyer'],
             },
           },
         }),
@@ -131,6 +132,7 @@ describe('server-side session restoration', () => {
         firstName: 'Test',
         lastName: 'Player',
         isAdministrator: false,
+        workspaces: ['buyer'],
       },
     });
     expect(JSON.stringify(result)).not.toContain(credential);

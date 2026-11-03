@@ -1,4 +1,5 @@
 import type { FastifyPluginAsync } from 'fastify';
+import type { WorkspaceAccessRepository } from '../accounts/workspace-access.repository.js';
 import type { ZodTypeProvider } from '@fastify/type-provider-zod';
 import { ApplicationError } from '../../../http/application-error.js';
 import { apiErrorEnvelopeSchema } from '../../../http/error.schema.js';
@@ -15,6 +16,7 @@ import {
 export interface AuthenticationRoutesOptions {
   login: LoginService;
   sessions: SessionService;
+  workspaces: WorkspaceAccessRepository;
 }
 
 function bearerCredential(authorization: string | undefined): string | null {
@@ -122,6 +124,15 @@ export const authenticationRoutes: FastifyPluginAsync<
         );
       }
 
+      const workspaces = await options.workspaces.forActiveUser(session.userId);
+
+      if (!workspaces) {
+        throw new ApplicationError(
+          'UNAUTHENTICATED',
+          'Authentication is required.',
+        );
+      }
+
       return reply.code(200).send({
         data: {
           user: {
@@ -130,6 +141,7 @@ export const authenticationRoutes: FastifyPluginAsync<
             firstName: session.firstName,
             lastName: session.lastName,
             isAdministrator: session.isAdministrator,
+            workspaces: workspaces || [],
           },
         },
       });

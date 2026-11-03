@@ -90,6 +90,7 @@ describe('authentication UI', () => {
                 firstName: 'Test',
                 lastName: 'Player',
                 isAdministrator: false,
+                workspaces: ['buyer'],
               }}
               csrfToken='session-bound-csrf'
             />

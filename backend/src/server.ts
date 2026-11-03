@@ -12,6 +12,7 @@ import {
 import { parseEmailQueueConfig } from './config/email-queue-env.js';
 import { createEmailVerificationRepository } from './modules/identity/verification/email-verification.repository.js';
 import { createEmailVerificationService } from './modules/identity/verification/email-verification.service.js';
+import { createWorkspaceAccessRepository } from './modules/identity/accounts/workspace-access.repository.js';
 import { createEmailVerificationResendRepository } from './modules/identity/verification/email-verification-resend.repository.js';
 import { createResendVerificationService } from './modules/identity/verification/resend-verification.service.js';
 import { createLoginAttemptCounterRepository } from './modules/identity/sessions/login-attempt-counter.repository.js';
@@ -120,6 +121,7 @@ async function start(): Promise<void> {
       authentication: {
         login: loginService,
         sessions: sessionService,
+        workspaces: createWorkspaceAccessRepository(db),
       },
       userProfile: {
         service: userProfileService,

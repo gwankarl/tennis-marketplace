@@ -238,7 +238,8 @@ export function createUserSessionRepository(
         if (
           !account ||
           account.status !== 'active' ||
-          account.emailVerifiedAt === null
+          account.emailVerifiedAt === null ||
+          (account.isAdministrator && process.env.NODE_ENV === 'production')
         ) {
           return null;
         }

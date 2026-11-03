@@ -1,4 +1,4 @@
-import { Form, Link, useNavigation } from 'react-router';
+import { Form, useNavigation } from 'react-router';
 import type { SessionUser } from '../../../lib/security/auth-session.server';
 
 export function BuyerOverview({
@@ -18,10 +18,6 @@ export function BuyerOverview({
       <h1>Your Tennis Xpress account</h1>
       <p>Welcome, {user.firstName}.</p>
       <p>You are signed in as {user.email}.</p>
-
-      <p>
-        <Link to='/profile'>User Profile</Link>
-      </p>
 
       {logoutError && <p role='alert'>{logoutError}</p>}
 

@@ -1,0 +1,1 @@
+ALTER TYPE "public"."user_permission" ADD VALUE 'seller';
