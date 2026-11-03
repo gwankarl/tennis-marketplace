@@ -117,6 +117,10 @@ export function LoginForm({
       </Form>
 
       <p>
+        Forgot your password? <Link to='/forgot-password'>Reset it</Link>
+      </p>
+
+      <p>
         Need an account? <Link to='/register'>Create one</Link>
       </p>
     </main>
